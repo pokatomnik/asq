@@ -1,40 +1,26 @@
 use handlebars::template::{HelperTemplate, TemplateElement};
 
-use crate::entities::placeholder::Placeholder;
+use crate::{entities::placeholder::Placeholder, utils::ordered_set::OrderedSet};
 
 static UNRECOGNIZED_ERROR: &'static str = "Unrecognized";
 static KEY_PROMPT: &'static str = "prompt";
 static KEY_MULTILINE: &'static str = "multiline";
 
 pub struct PromptTemplate {
-    vars: std::collections::BTreeMap<Placeholder>,
+    vars: OrderedSet<Placeholder>,
 }
 
-impl PromptTemplate {
-    fn validate_options(item: &HelperTemplate) -> anyhow::Result<()> {
-        const ALLOWED_KEYS: [&str; 2] = [KEY_MULTILINE, KEY_PROMPT];
+impl TryFrom<&str> for PromptTemplate {
+    type Error = anyhow::Error;
 
-        for key in item.hash.keys() {
-            if !ALLOWED_KEYS.contains(&key.as_str()) {
-                anyhow::bail!(
-                    "unknown placeholder option `{}`. Allowed options: {}",
-                    key,
-                    ALLOWED_KEYS.join(", ")
-                );
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn new(input: impl AsRef<str>) -> anyhow::Result<Self> {
-        let template = handlebars::template::Template::compile(input.as_ref())?;
-        let mut vars = std::collections::BTreeSet::new();
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let template = handlebars::template::Template::compile(value)?;
+        let mut set = OrderedSet::with_capacity(5);
         for item in template.elements {
             match item {
                 TemplateElement::Expression(helper_template) => {
                     let placeholder = Self::parse_placeholder(helper_template)?;
-                    vars.insert(placeholder);
+                    set.insert(placeholder);
                 }
                 TemplateElement::RawString(_) => continue,
                 TemplateElement::HtmlExpression(helper_template) => {
@@ -98,10 +84,30 @@ impl PromptTemplate {
             }
         }
 
-        Ok(Self { vars })
+        let result = Self { vars: set };
+
+        Ok(result)
+    }
+}
+
+impl PromptTemplate {
+    fn validate_options(item: &HelperTemplate) -> anyhow::Result<()> {
+        const ALLOWED_KEYS: [&str; 2] = [KEY_MULTILINE, KEY_PROMPT];
+
+        for key in item.hash.keys() {
+            if !ALLOWED_KEYS.contains(&key.as_str()) {
+                anyhow::bail!(
+                    "unknown placeholder option `{}`. Allowed options: {}",
+                    key,
+                    ALLOWED_KEYS.join(", ")
+                );
+            }
+        }
+
+        Ok(())
     }
 
-    pub fn vars(&self) -> impl Iterator<Item = &Placeholder> {
+    pub fn iter(&self) -> impl Iterator<Item = &Placeholder> {
         self.vars.iter()
     }
 
@@ -167,8 +173,8 @@ mod tests {
 
     #[test]
     fn test_parse_prompt() {
-        let template = PromptTemplate::new(PROMPT).unwrap();
-        let vars: Vec<&Placeholder> = template.vars().collect();
+        let template = PromptTemplate::try_from(PROMPT).unwrap();
+        let vars: Vec<&Placeholder> = template.iter().collect();
         assert_eq!(vars.len(), 3);
 
         let (first, second, third) = (

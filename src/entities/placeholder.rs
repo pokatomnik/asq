@@ -1,8 +1,14 @@
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub(crate) struct Placeholder {
     name: String,
     multiline: bool,
     prompt: Option<String>,
+}
+
+impl AsRef<Placeholder> for Placeholder {
+    fn as_ref(&self) -> &Placeholder {
+        self
+    }
 }
 
 impl Placeholder {
