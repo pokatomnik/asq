@@ -49,6 +49,7 @@ impl Config {
             .with_prompt(
                 "Specify full path to your prompts. If path does not exist, asq will create It",
             )
+            .report(false)
             .default(home_dir.join("prompts").to_string_lossy().to_string())
             .show_default(true)
             .interact()

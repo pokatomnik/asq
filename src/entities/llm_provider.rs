@@ -12,6 +12,14 @@ pub(crate) enum LLMProvider {
     Ollama(OllamaProvider),
 }
 
+impl Display for LLMProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LLMProvider::Ollama(ollama_provider) => f.write_str(ollama_provider.name()),
+        }
+    }
+}
+
 impl Display for LLMProviderKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

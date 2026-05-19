@@ -1,4 +1,10 @@
-use handlebars::template::{HelperTemplate, TemplateElement};
+use std::{collections::HashMap, sync::Arc};
+
+use handlebars::{
+    Context, Handlebars, Helper, HelperResult, Output, RenderContext, RenderErrorReason, Template,
+    template::{HelperTemplate, TemplateElement},
+};
+use serde_json::Value;
 
 use crate::{entities::placeholder::Placeholder, utils::ordered_set::OrderedSet};
 
@@ -8,15 +14,16 @@ static KEY_MULTILINE: &'static str = "multiline";
 
 pub struct PromptTemplate {
     vars: OrderedSet<Placeholder>,
+    template: String,
 }
 
 impl TryFrom<&str> for PromptTemplate {
     type Error = anyhow::Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let template = handlebars::template::Template::compile(value)?;
+        let template = Template::compile(value)?;
         let mut set = OrderedSet::with_capacity(5);
-        for item in template.elements {
+        for item in template.elements.iter() {
             match item {
                 TemplateElement::Expression(helper_template) => {
                     let placeholder = Self::parse_placeholder(helper_template)?;
@@ -84,7 +91,10 @@ impl TryFrom<&str> for PromptTemplate {
             }
         }
 
-        let result = Self { vars: set };
+        let result = Self {
+            vars: set,
+            template: value.to_string(),
+        };
 
         Ok(result)
     }
@@ -111,7 +121,7 @@ impl PromptTemplate {
         self.vars.iter()
     }
 
-    fn parse_placeholder(item: Box<HelperTemplate>) -> anyhow::Result<Placeholder> {
+    fn parse_placeholder(item: &Box<HelperTemplate>) -> anyhow::Result<Placeholder> {
         Self::validate_options(item.as_ref())?;
 
         let name = Self::parse_name(item.as_ref())?;
@@ -157,6 +167,48 @@ impl PromptTemplate {
             },
             None => Ok(None),
         }
+    }
+
+    pub fn compile(&self, fill_with: HashMap<Placeholder, String>) -> anyhow::Result<String> {
+        let mut hbs = Handlebars::new();
+        let shared_responses = Arc::new(fill_with);
+
+        hbs.register_escape_fn(handlebars::no_escape);
+
+        for (placeholder, _) in shared_responses.iter() {
+            let placeholder_copy = placeholder.clone();
+            let shared_responses = shared_responses.clone();
+            let handler = Box::new(
+                move |_: &Helper<'_>,
+                      _: &Handlebars<'_>,
+                      _: &Context,
+                      _: &mut RenderContext<'_, '_>,
+                      out: &mut dyn Output|
+                      -> HelperResult {
+                    let value = shared_responses.get(&placeholder_copy).ok_or_else(|| {
+                        RenderErrorReason::Other(format!(
+                            "missing value for placeholder `{}`",
+                            placeholder_copy.name()
+                        ))
+                    })?;
+
+                    out.write(value)?;
+                    Ok(())
+                },
+            );
+            hbs.register_helper(placeholder.name(), handler);
+        }
+
+        let data = Value::Object(
+            shared_responses
+                .iter()
+                .map(|(key, value)| (key.name().to_owned(), Value::String(value.clone())))
+                .collect(),
+        );
+
+        let rendered = hbs.render_template(self.template.as_str(), &data)?;
+
+        Ok(rendered)
     }
 }
 

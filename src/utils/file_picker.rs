@@ -85,8 +85,8 @@ fn get_list_items(
             .unwrap_or_default()
     });
 
-    if !is_root {
-        result.push(ListItem::Up(path.as_ref().to_path_buf()));
+    if !is_root && let Some(parent) = path.as_ref().parent() {
+        result.push(ListItem::Up(parent.to_path_buf()));
     }
     result.extend(folders.into_iter().map(|v| ListItem::Dir(v)));
     result.extend(files.into_iter().map(|v| ListItem::File(v)));
@@ -111,6 +111,8 @@ impl<'a> FilePicker for FuzzySelect<'a> {
                 .items(&dir_contents)
                 .default(0)
                 .highlight_matches(true)
+                .clear(true)
+                .report(false)
                 .interact()?;
             let selected = &dir_contents
                 .get(idx)
