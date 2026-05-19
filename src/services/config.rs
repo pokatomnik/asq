@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::entities::llm_provider::{LLMProvider, LLMProviderKind};
+use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
 use crate::entities::ollama_provider::OllamaProvider;
 use crate::utils::fileman;
 use crate::utils::init_interactive::InitInteractive;
@@ -12,7 +12,7 @@ static CONFIG_FILE_NAME: &'static str = "asq.json";
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct Config {
     #[serde(rename = "providers")]
-    providers: Vec<LLMProvider>,
+    providers: Vec<LLMProviderKind>,
 
     /// Full path to prompts
     #[serde(rename = "promptsDir")]
@@ -38,7 +38,7 @@ impl Config {
     }
 
     /// Get all providers list
-    pub fn providers(&self) -> impl Iterator<Item = &LLMProvider> {
+    pub fn providers(&self) -> impl Iterator<Item = &LLMProviderKind> {
         self.providers.iter()
     }
 
@@ -58,7 +58,7 @@ impl Config {
         Ok(result)
     }
 
-    fn ask_providers() -> anyhow::Result<Vec<LLMProvider>> {
+    fn ask_providers() -> anyhow::Result<Vec<LLMProviderKind>> {
         let mut providers = Vec::new();
 
         let mut proceed = true;
@@ -80,15 +80,17 @@ impl Config {
         Ok(providers)
     }
 
-    fn ask_provider() -> anyhow::Result<LLMProvider> {
+    fn ask_provider() -> anyhow::Result<LLMProviderKind> {
         let kind = Self::ask_kind()?;
         match kind {
-            LLMProviderKind::Ollama => Ok(LLMProvider::Ollama(OllamaProvider::init_interactive()?)),
+            LLMProviderKindOnly::Ollama => {
+                Ok(LLMProviderKind::Ollama(OllamaProvider::init_interactive()?))
+            }
         }
     }
 
-    fn ask_kind() -> anyhow::Result<LLMProviderKind> {
-        let all_kinds = vec![LLMProviderKind::Ollama];
+    fn ask_kind() -> anyhow::Result<LLMProviderKindOnly> {
+        let all_kinds = vec![LLMProviderKindOnly::Ollama];
         let kind_idx = dialoguer::FuzzySelect::new()
             .with_prompt("Select LLM provider kind")
             .default(0)

@@ -16,13 +16,6 @@ where
         }
     }
 
-    pub fn new() -> Self {
-        OrderedSet {
-            set: HashSet::new(),
-            values: Vec::new(),
-        }
-    }
-
     pub fn insert(&mut self, value: V) -> bool {
         let val = Rc::new(value);
 
@@ -33,10 +26,6 @@ where
         }
 
         inserted
-    }
-
-    pub fn has(&self, value: &V) -> bool {
-        self.set.contains(value)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &V> {
