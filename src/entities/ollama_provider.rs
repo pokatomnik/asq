@@ -3,13 +3,12 @@ use std::cell::OnceCell;
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    entities::{llm_provider::LLMProvider, proxy::LLMProxy, system_prompt::SYSTEM_PROMPT},
-    utils::{
-        client_builder_ext::ClientBuilderExt, init_interactive::InitInteractive,
-        request_builder_ext::RequestBuilderExt,
-    },
-};
+use crate::entities::llm_provider::LLMProvider;
+use crate::entities::proxy::LLMProxy;
+use crate::entities::system_prompt::SYSTEM_PROMPT;
+use crate::utils::client_builder_ext::ClientBuilderExt;
+use crate::utils::init_interactive::InitInteractive;
+use crate::utils::request_builder_ext::RequestBuilderExt;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct OllamaProvider {
