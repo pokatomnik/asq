@@ -1,6 +1,11 @@
+use std::path::PathBuf;
+
 use serde::{Deserialize, Serialize};
 
-use crate::{entities::llm_provider::LLMProvider, utils::fileman};
+use crate::entities::llm_provider::{LLMProvider, LLMProviderKind};
+use crate::entities::ollama_provider::OllamaProvider;
+use crate::utils::fileman;
+use crate::utils::init_interactive::InitInteractive;
 
 static CONFIG_FILE_NAME: &'static str = "asq.json";
 
@@ -37,18 +42,77 @@ impl Config {
         self.providers.iter()
     }
 
-    /// Asks questions interactively and forces the user to do initial setup
-    pub fn init_interactive() -> anyhow::Result<Self> {
-        println!(
-            "You have no configuration yet. Please answer questions to initialize configuration"
-        );
+    fn ask_prompt_paths() -> anyhow::Result<PathBuf> {
         let home_dir = fileman::FileMan::home_dir()
             .ok_or_else(|| anyhow::Error::msg("Can't get home directory"))?;
-        let prompts_path = dialoguer::Input::new()
+        let result = dialoguer::Input::new()
             .with_prompt(
                 "Specify full path to your prompts. If path does not exist, asq will create It",
             )
-            .default(home_dir.join("prompts"))
-            .show_default(true).;
+            .default(home_dir.join("prompts").to_string_lossy().to_string())
+            .show_default(true)
+            .interact()
+            .map(PathBuf::from)?;
+
+        Ok(result)
+    }
+
+    fn ask_providers() -> anyhow::Result<Vec<LLMProvider>> {
+        let mut providers = Vec::new();
+
+        let mut proceed = true;
+
+        while proceed {
+            let Ok(new_provider) = Self::ask_provider() else {
+                anyhow::bail!("Incorrect provider")
+            };
+            providers.push(new_provider);
+
+            proceed = dialoguer::Confirm::new()
+                .with_prompt("Add one more model?")
+                .default(false)
+                .show_default(true)
+                .interact()
+                .unwrap_or(false)
+        }
+
+        Ok(providers)
+    }
+
+    fn ask_provider() -> anyhow::Result<LLMProvider> {
+        let kind = Self::ask_kind()?;
+        match kind {
+            LLMProviderKind::Ollama => Ok(LLMProvider::Ollama(OllamaProvider::init_interactive()?)),
+        }
+    }
+
+    fn ask_kind() -> anyhow::Result<LLMProviderKind> {
+        let all_kinds = vec![LLMProviderKind::Ollama];
+        let kind_idx = dialoguer::FuzzySelect::new()
+            .with_prompt("Select LLM provider kind")
+            .default(0)
+            .highlight_matches(true)
+            .items(&all_kinds)
+            .interact()?;
+        let kind = &all_kinds.get(kind_idx);
+        kind.cloned()
+            .ok_or_else(|| anyhow::Error::msg("Provider kind not found"))
+    }
+}
+
+impl InitInteractive<Config> for Config {
+    /// Asks questions interactively and forces the user to do initial setup
+    fn init_interactive() -> anyhow::Result<Self> {
+        println!(
+            "You have no configuration yet. Please answer questions to initialize configuration"
+        );
+        let prompts_path = Self::ask_prompt_paths()?;
+        let providers = Self::ask_providers()?;
+
+        let result = Self {
+            prompts_dir: prompts_path.to_string_lossy().to_string(),
+            providers,
+        };
+        Ok(result)
     }
 }

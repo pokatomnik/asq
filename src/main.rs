@@ -1,22 +1,28 @@
-use crate::services::{asker::Asker, prompt_template::PromptTemplate};
+use clap::Parser;
 
+use crate::cmd::cli;
+use crate::cmd::commands::Commands::Onboard;
+use crate::controllers::controller::Controller;
+use crate::controllers::index::IndexController;
+
+mod cmd;
+mod controllers;
 mod entities;
 mod services;
 mod utils;
 
-const FOO: &'static str = "
-    You are {{ role }},
-    You must do {{ action prompt = \"Action:\" }}
-    Context: {{ context multiline = true prompt = \"Context:\" }}
-";
-
 fn main() -> anyhow::Result<()> {
-    let template = PromptTemplate::try_from(FOO)?;
+    let cli = cli::Cli::parse();
+    let result = match cli.command {
+        Some(command) => match command {
+            Onboard(onboard_controller) => onboard_controller.handle(),
+        },
+        None => IndexController::new().handle(),
+    };
 
-    let asker = Asker::new(template.iter());
-    let result = asker.ask();
+    if let Err(ref e) = result {
+        eprintln!("Error: \"{}\"", e.to_string());
+    }
 
-    println!("{:#?}", result);
-
-    Ok(())
+    result
 }
