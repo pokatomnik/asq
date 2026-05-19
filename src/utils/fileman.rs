@@ -6,10 +6,6 @@ static USER_CONFIG_DIR_NAME: &'static str = ".config";
 static ASQ_DIR_NAME: &'static str = "asq";
 
 impl FileMan {
-    fn new() -> Self {
-        Self
-    }
-
     pub fn home_dir() -> Option<PathBuf> {
         std::env::home_dir()
     }

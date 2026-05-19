@@ -4,6 +4,8 @@ use clap::Args;
 
 use crate::controllers::controller::Controller;
 use crate::controllers::onboard::OnboardController;
+use crate::entities::llm_provider::LLMProvider;
+use crate::entities::llm_provider_kind::LLMProviderKind;
 use crate::services::asker::Asker;
 use crate::services::config::Config;
 use crate::services::prompt_template::PromptTemplate;
@@ -37,8 +39,7 @@ impl IndexController {
         Ok(result)
     }
 
-    fn select_template(config: Option<Config>) -> anyhow::Result<PromptTemplate> {
-        let config = Self::ensure_config(config)?;
+    fn select_template(config: &Config) -> anyhow::Result<PromptTemplate> {
         let root: PathBuf = config.prompts_dir().parse()?;
         let prompt_template_path = Self::pick_file(&root)?;
         let contents = Self::read_template_contents(&prompt_template_path)?;
@@ -47,13 +48,34 @@ impl IndexController {
         Ok(template)
     }
 
+    fn select_provider_kind(config: &Config) -> anyhow::Result<&LLMProviderKind> {
+        let providers: Vec<&LLMProviderKind> = config.providers().into_iter().collect();
+        let idx = dialoguer::FuzzySelect::new()
+            .with_prompt("Select LLM provider")
+            .default(0)
+            .highlight_matches(true)
+            .items(&providers)
+            .interact()?;
+        let provider = &providers
+            .get(idx)
+            .ok_or_else(|| anyhow::Error::msg("Failed to select LLM provider"))?;
+
+        Ok(provider)
+    }
+
     fn handle_select_prompt_file(config: Option<Config>) -> anyhow::Result<()> {
-        let template = Self::select_template(config)?;
+        let config = Self::ensure_config(config)?;
+        let provider = Self::select_provider_kind(&config)?;
+        let template = Self::select_template(&config)?;
         let asker = Asker::new(template.iter());
         let answers = asker.ask()?;
         let prompt = template.compile(answers)?;
 
-        println!("{}", prompt);
+        let response = match provider {
+            LLMProviderKind::Ollama(ollama_provider) => ollama_provider.ask(prompt),
+        }?;
+
+        println!("{}", response);
         Ok(())
     }
 }

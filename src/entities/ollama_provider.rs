@@ -1,8 +1,14 @@
 use std::cell::OnceCell;
 
+use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 
-use crate::{entities::proxy::LLMProxy, utils::init_interactive::InitInteractive};
+use crate::entities::llm_provider::LLMProvider;
+use crate::entities::proxy::LLMProxy;
+use crate::entities::system_prompt::SYSTEM_PROMPT;
+use crate::utils::client_builder_ext::ClientBuilderExt;
+use crate::utils::init_interactive::InitInteractive;
+use crate::utils::request_builder_ext::RequestBuilderExt;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct OllamaProvider {
@@ -111,5 +117,60 @@ impl InitInteractive<OllamaProvider> for OllamaProvider {
             model,
             proxy: proxy_scheme,
         })
+    }
+}
+
+impl LLMProvider for OllamaProvider {
+    fn ask(&self, prompt: impl AsRef<str>) -> anyhow::Result<String> {
+        let model = self.model();
+        let prompt = prompt.as_ref();
+
+        let body = serde_json::json!({
+            "model": model,
+            "prompt": prompt,
+            "stream": false,
+            "system": SYSTEM_PROMPT,
+            // TODO add options here
+            // "options": {}
+        });
+        let body_json_str = serde_json::to_string(&body)?;
+
+        let client = reqwest::blocking::ClientBuilder::new()
+            .with_optional_proxy(self.proxy().as_ref())
+            .build()?;
+
+        let url = format!("{}/api/generate", self.enpoint_url().trim_matches('/'));
+
+        let request_builder = client
+            .request(Method::POST, url)
+            .application_json()
+            .with_optional_bearer_token(self.auth_token());
+
+        let response = request_builder.body(body_json_str).send()?;
+
+        if response.status() != StatusCode::OK {
+            anyhow::bail!(format!(
+                "Ollama responded with status:{}",
+                response.status()
+            ))
+        }
+
+        let result: OllamaGenerateResponse = response.text()?.try_into()?;
+
+        Ok(result.response)
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct OllamaGenerateResponse {
+    response: String,
+}
+
+impl TryFrom<String> for OllamaGenerateResponse {
+    type Error = anyhow::Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let result = serde_json::from_str::<OllamaGenerateResponse>(value.as_str())?;
+        Ok(result)
     }
 }

@@ -10,11 +10,22 @@ pub(crate) struct LLMProxy {
     proxy_scheme: String,
 }
 
+impl AsRef<LLMProxy> for LLMProxy {
+    fn as_ref(&self) -> &LLMProxy {
+        self
+    }
+}
+
 impl LLMProxy {
+    #[allow(unused)]
     fn new(proxy_scheme: impl AsRef<str>) -> Self {
         Self {
             proxy_scheme: proxy_scheme.as_ref().to_string(),
         }
+    }
+
+    pub fn proxy_scheme(&self) -> &str {
+        &self.proxy_scheme
     }
 
     fn ask_proxy_scheme() -> anyhow::Result<String> {
