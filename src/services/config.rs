@@ -62,6 +62,19 @@ impl Config {
         self.providers.push(provider);
     }
 
+    pub fn delete_provider_by_idx(&mut self, idx: usize) {
+        self.providers = self
+            .providers
+            .clone()
+            .iter()
+            .enumerate()
+            .filter_map(|(current_idx, provider)| match current_idx == idx {
+                true => None,
+                false => Some(provider.to_owned()),
+            })
+            .collect();
+    }
+
     fn ask_providers() -> anyhow::Result<Vec<LLMProviderKind>> {
         let mut providers = Vec::new();
 

@@ -142,10 +142,11 @@ impl LLMProvider for OllamaProvider {
 
         let url = format!("{}/api/generate", self.enpoint_url().trim_matches('/'));
 
+        let token = self.auth_token();
         let request_builder = client
             .request(Method::POST, url)
             .application_json()
-            .with_optional_bearer_token(self.auth_token());
+            .with_optional_bearer_token(token);
 
         let response = request_builder.body(body_json_str).send()?;
 

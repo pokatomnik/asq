@@ -14,5 +14,6 @@
     "sourceLanguages": ["rust"],
     "request": "launch",
     "adapter": "CodeLLDB",
+    // "args": ["providers", "add"],
   },
 ]
