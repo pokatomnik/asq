@@ -1,7 +1,8 @@
 use clap::Parser;
 
 use crate::cmd::cli;
-use crate::cmd::commands::Commands::Onboard;
+use crate::cmd::commands::Commands::{self, Onboard};
+use crate::cmd::providers::ProvidersActions;
 use crate::controllers::controller::Controller;
 use crate::controllers::index::IndexController;
 
@@ -16,6 +17,13 @@ fn main() -> anyhow::Result<()> {
     let result = match cli.command {
         Some(command) => match command {
             Onboard(onboard_controller) => onboard_controller.handle(),
+            Commands::Models(models_actions) => match models_actions {
+                ProvidersActions::List(models_list_controller) => models_list_controller.handle(),
+                ProvidersActions::Add(models_add_controller) => models_add_controller.handle(),
+                ProvidersActions::Delete(models_delete_controller) => {
+                    models_delete_controller.handle()
+                }
+            },
         },
         None => IndexController::new().handle(),
     };
