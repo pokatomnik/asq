@@ -7,5 +7,5 @@ pub(crate) enum Commands {
     Onboard(OnboardController),
 
     #[command(subcommand)]
-    Models(ProvidersActions),
+    Providers(ProvidersActions),
 }
