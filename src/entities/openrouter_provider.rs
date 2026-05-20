@@ -157,8 +157,6 @@ impl LLMProvider for OpenrouterProvider {
         }
 
         Ok(llm_response_message.message.content.to_owned())
-
-        // Ok(result.)
     }
 }
 
