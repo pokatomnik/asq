@@ -10,6 +10,9 @@ pub struct ProvidersListController;
 impl ProvidersListController {
     fn select_provider_kind(config: &Config) -> anyhow::Result<&LLMProviderKind> {
         let providers: Vec<&LLMProviderKind> = config.providers().into_iter().collect();
+        if providers.is_empty() {
+            anyhow::bail!("You have no providers configured. Add a new one.")
+        }
         let idx = dialoguer::FuzzySelect::new()
             .with_prompt("Select LLM provider")
             .default(0)

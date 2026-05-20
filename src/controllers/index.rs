@@ -63,7 +63,7 @@ impl IndexController {
         Ok(provider)
     }
 
-    fn handle_select_prompt_file(config: Option<Config>) -> anyhow::Result<()> {
+    fn handle_ask_model(config: Option<Config>) -> anyhow::Result<()> {
         let config = Self::ensure_config(config)?;
         let provider = Self::select_provider_kind(&config)?;
         let template = Self::select_template(&config)?;
@@ -84,10 +84,10 @@ impl Controller for IndexController {
     fn handle(&self) -> anyhow::Result<()> {
         let config = Config::try_read();
         match config {
-            Ok(config) => Self::handle_select_prompt_file(Some(config)),
+            Ok(config) => Self::handle_ask_model(Some(config)),
             Err(_) => {
                 OnboardController::new().handle()?;
-                Self::handle_select_prompt_file(None)
+                Self::handle_ask_model(None)
             }
         }
     }

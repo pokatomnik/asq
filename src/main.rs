@@ -28,9 +28,5 @@ fn main() -> anyhow::Result<()> {
         None => IndexController::new().handle(),
     };
 
-    if let Err(ref e) = result {
-        eprintln!("Error: \"{}\"", e.to_string());
-    }
-
     result
 }
