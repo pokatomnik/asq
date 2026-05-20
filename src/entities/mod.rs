@@ -1,6 +1,7 @@
 pub(crate) mod llm_provider;
 pub(crate) mod llm_provider_kind;
 pub(crate) mod ollama_provider;
+pub(crate) mod openrouter_provider;
 pub(crate) mod placeholder;
 pub(crate) mod proxy;
 pub(crate) mod system_prompt;
