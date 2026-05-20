@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use strum_macros::EnumDiscriminants;
 
 use crate::entities::ollama_provider::OllamaProvider;
+use crate::utils::describe::Describe;
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumDiscriminants)]
 #[serde(tag = "kind")]
@@ -14,6 +15,20 @@ use crate::entities::ollama_provider::OllamaProvider;
 )]
 pub(crate) enum LLMProviderKind {
     Ollama(OllamaProvider),
+}
+
+impl AsRef<LLMProviderKind> for LLMProviderKind {
+    fn as_ref(&self) -> &LLMProviderKind {
+        self
+    }
+}
+
+impl Describe for LLMProviderKind {
+    fn describe(&self) -> String {
+        match self {
+            LLMProviderKind::Ollama(ollama_provider) => ollama_provider.describe(),
+        }
+    }
 }
 
 impl Display for LLMProviderKind {

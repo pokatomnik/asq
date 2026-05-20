@@ -7,6 +7,7 @@ use crate::entities::llm_provider::LLMProvider;
 use crate::entities::proxy::LLMProxy;
 use crate::entities::system_prompt::SYSTEM_PROMPT;
 use crate::utils::client_builder_ext::ClientBuilderExt;
+use crate::utils::describe::Describe;
 use crate::utils::init_interactive::InitInteractive;
 use crate::utils::request_builder_ext::RequestBuilderExt;
 
@@ -158,6 +159,29 @@ impl LLMProvider for OllamaProvider {
         let result: OllamaGenerateResponse = response.text()?.try_into()?;
 
         Ok(result.response)
+    }
+}
+
+impl Describe for OllamaProvider {
+    fn describe(&self) -> String {
+        let mut result = String::with_capacity(50);
+
+        result.push_str(format!("Name: {}\n", self.name()).as_str());
+
+        result.push_str(format!("ModelID: {}\n", self.model()).as_str());
+
+        result.push_str(format!("Base URL: {}\n", self.enpoint_url()).as_str());
+
+        let auth_token_env_key = self.auth_token().unwrap_or("Not set");
+        result.push_str(format!("Auth token env key: {auth_token_env_key}\n",).as_str());
+
+        let proxy = self
+            .proxy()
+            .map(|p| p.proxy_scheme().to_string())
+            .unwrap_or_else(|| "Not set".to_string());
+        result.push_str(format!("Proxy: {}\n", proxy.as_str()).as_str());
+
+        result
     }
 }
 

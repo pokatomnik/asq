@@ -58,6 +58,10 @@ impl Config {
         Ok(result)
     }
 
+    pub fn add_provider(&mut self, provider: LLMProviderKind) {
+        self.providers.push(provider);
+    }
+
     fn ask_providers() -> anyhow::Result<Vec<LLMProviderKind>> {
         let mut providers = Vec::new();
 
