@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
 use crate::entities::ollama_provider::OllamaProvider;
+use crate::entities::openrouter_provider::OpenrouterProvider;
 use crate::utils::fileman;
 use crate::utils::init_interactive::InitInteractive;
 
@@ -103,11 +104,14 @@ impl Config {
             LLMProviderKindOnly::Ollama => {
                 Ok(LLMProviderKind::Ollama(OllamaProvider::init_interactive()?))
             }
+            LLMProviderKindOnly::Openrouter => Ok(LLMProviderKind::Openrouter(
+                OpenrouterProvider::init_interactive()?,
+            )),
         }
     }
 
     fn ask_kind() -> anyhow::Result<LLMProviderKindOnly> {
-        let all_kinds = vec![LLMProviderKindOnly::Ollama];
+        let all_kinds = vec![LLMProviderKindOnly::Ollama, LLMProviderKindOnly::Openrouter];
         let kind_idx = dialoguer::FuzzySelect::new()
             .with_prompt("Select LLM provider kind")
             .default(0)

@@ -173,7 +173,10 @@ impl Describe for OllamaProvider {
 
         result.push_str(format!("Base URL: {}\n", self.enpoint_url()).as_str());
 
-        let auth_token_env_key = self.auth_token().unwrap_or("Not set");
+        let auth_token_env_key = self
+            .auth_token_env_key
+            .clone()
+            .unwrap_or_else(|| "Not set".to_string());
         result.push_str(format!("Auth token env key: {auth_token_env_key}\n",).as_str());
 
         let proxy = self
