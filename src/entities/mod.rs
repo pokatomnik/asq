@@ -1,3 +1,4 @@
+pub(crate) mod duckduckgo_provider;
 pub(crate) mod llm_provider;
 pub(crate) mod llm_provider_kind;
 pub(crate) mod ollama_provider;

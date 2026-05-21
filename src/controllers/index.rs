@@ -74,6 +74,7 @@ impl IndexController {
         let response = match provider {
             LLMProviderKind::Ollama(ollama_provider) => ollama_provider.ask(prompt),
             LLMProviderKind::Openrouter(openrouter_provider) => openrouter_provider.ask(prompt),
+            LLMProviderKind::DuckDuckGo(duckduckgo_provider) => duckduckgo_provider.ask(prompt),
         }?;
 
         println!("{}", response);
