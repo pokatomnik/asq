@@ -1,6 +1,7 @@
 use clap::Args;
 
 use crate::controllers::controller::Controller;
+use crate::entities::duckduckgo_provider::DuckDuckGoProvider;
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
 use crate::entities::ollama_provider::OllamaProvider;
 use crate::entities::openrouter_provider::OpenrouterProvider;
@@ -12,7 +13,11 @@ pub(crate) struct ProvidersAddController {}
 
 impl ProvidersAddController {
     fn ask_kind() -> anyhow::Result<LLMProviderKindOnly> {
-        let all_kinds = vec![LLMProviderKindOnly::Ollama, LLMProviderKindOnly::Openrouter];
+        let all_kinds = vec![
+            LLMProviderKindOnly::Ollama,
+            LLMProviderKindOnly::Openrouter,
+            LLMProviderKindOnly::DuckDuckGo,
+        ];
         let kind_idx = dialoguer::FuzzySelect::new()
             .with_prompt("Select LLM provider kind")
             .default(0)
@@ -34,6 +39,9 @@ impl Controller for ProvidersAddController {
             }
             LLMProviderKindOnly::Openrouter => {
                 LLMProviderKind::Openrouter(OpenrouterProvider::init_interactive()?)
+            }
+            LLMProviderKindOnly::DuckDuckGo => {
+                LLMProviderKind::DuckDuckGo(DuckDuckGoProvider::init_interactive()?)
             }
         };
         let mut config = Config::try_read()?;

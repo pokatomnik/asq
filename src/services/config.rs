@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+use crate::entities::duckduckgo_provider::DuckDuckGoProvider;
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
 use crate::entities::ollama_provider::OllamaProvider;
 use crate::entities::openrouter_provider::OpenrouterProvider;
@@ -107,11 +108,18 @@ impl Config {
             LLMProviderKindOnly::Openrouter => Ok(LLMProviderKind::Openrouter(
                 OpenrouterProvider::init_interactive()?,
             )),
+            LLMProviderKindOnly::DuckDuckGo => Ok(LLMProviderKind::DuckDuckGo(
+                DuckDuckGoProvider::init_interactive()?,
+            )),
         }
     }
 
     fn ask_kind() -> anyhow::Result<LLMProviderKindOnly> {
-        let all_kinds = vec![LLMProviderKindOnly::Ollama, LLMProviderKindOnly::Openrouter];
+        let all_kinds = vec![
+            LLMProviderKindOnly::Ollama,
+            LLMProviderKindOnly::Openrouter,
+            LLMProviderKindOnly::DuckDuckGo,
+        ];
         let kind_idx = dialoguer::FuzzySelect::new()
             .with_prompt("Select LLM provider kind")
             .default(0)

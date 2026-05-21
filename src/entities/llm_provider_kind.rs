@@ -3,6 +3,7 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumDiscriminants;
 
+use crate::entities::duckduckgo_provider::DuckDuckGoProvider;
 use crate::entities::ollama_provider::OllamaProvider;
 use crate::entities::openrouter_provider::OpenrouterProvider;
 use crate::utils::describe::Describe;
@@ -17,6 +18,7 @@ use crate::utils::describe::Describe;
 pub(crate) enum LLMProviderKind {
     Ollama(OllamaProvider),
     Openrouter(OpenrouterProvider),
+    DuckDuckGo(DuckDuckGoProvider),
 }
 
 impl AsRef<LLMProviderKind> for LLMProviderKind {
@@ -30,6 +32,7 @@ impl Describe for LLMProviderKind {
         match self {
             LLMProviderKind::Ollama(ollama_provider) => ollama_provider.describe(),
             LLMProviderKind::Openrouter(openrouter_provider) => openrouter_provider.describe(),
+            LLMProviderKind::DuckDuckGo(duckduckgo_provider) => duckduckgo_provider.describe(),
         }
     }
 }
@@ -41,6 +44,9 @@ impl Display for LLMProviderKind {
             LLMProviderKind::Openrouter(openrouter_provider) => {
                 f.write_str(openrouter_provider.name())
             }
+            LLMProviderKind::DuckDuckGo(duckduckgo_provider) => {
+                f.write_str(duckduckgo_provider.name())
+            }
         }
     }
 }
@@ -50,6 +56,7 @@ impl Display for LLMProviderKindOnly {
         match self {
             LLMProviderKindOnly::Ollama => f.write_str("Ollama"),
             LLMProviderKindOnly::Openrouter => f.write_str("Openrouter"),
+            LLMProviderKindOnly::DuckDuckGo => f.write_str("DuckDuckGo (Browser)"),
         }
     }
 }
