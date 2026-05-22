@@ -1,12 +1,19 @@
 use std::{collections::HashMap, sync::Arc};
 
-use handlebars::{
-    Context, Handlebars, Helper, HelperResult, Output, RenderContext, RenderErrorReason, Template,
-    template::{HelperTemplate, TemplateElement},
-};
+use handlebars::Context;
+use handlebars::Handlebars;
+use handlebars::Helper;
+use handlebars::HelperResult;
+use handlebars::Output;
+use handlebars::RenderContext;
+use handlebars::RenderErrorReason;
+use handlebars::Template;
+use handlebars::template::{HelperTemplate, TemplateElement};
 use serde_json::Value;
 
-use crate::{entities::placeholder::Placeholder, utils::ordered_set::OrderedSet};
+use crate::entities::placeholder::Placeholder;
+use crate::entities::prompt::Prompt;
+use crate::utils::ordered_set::OrderedSet;
 
 static UNRECOGNIZED_ERROR: &'static str = "Unrecognized";
 static KEY_PROMPT: &'static str = "prompt";
@@ -169,7 +176,7 @@ impl PromptTemplate {
         }
     }
 
-    pub fn compile(&self, fill_with: HashMap<Placeholder, String>) -> anyhow::Result<String> {
+    pub fn compile(&self, fill_with: HashMap<Placeholder, String>) -> anyhow::Result<Prompt> {
         let mut hbs = Handlebars::new();
         let shared_responses = Arc::new(fill_with);
 
@@ -208,7 +215,7 @@ impl PromptTemplate {
 
         let rendered = hbs.render_template(self.template.as_str(), &data)?;
 
-        Ok(rendered)
+        Ok(Prompt::new(rendered.as_str()))
     }
 }
 
