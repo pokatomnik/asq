@@ -25,6 +25,7 @@ impl TypedFrontmatter {
 pub enum FrondmatterKind {
     Typed(TypedFrontmatter),
     Untyped(yaml_serde::Value),
+    Raw(String),
 }
 
 impl Prompt {
@@ -74,6 +75,13 @@ impl Prompt {
 
         if let Ok(untyped_frontmatter) = untyped_frontmatter {
             return (Some(FrondmatterKind::Untyped(untyped_frontmatter)), prompt);
+        }
+
+        if frontmatter_raw.trim().len() > 0 {
+            return (
+                Some(FrondmatterKind::Raw(frontmatter_raw.to_string())),
+                prompt,
+            );
         }
 
         (None, prompt)
