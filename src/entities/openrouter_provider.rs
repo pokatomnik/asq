@@ -4,7 +4,7 @@ use std::fmt::Display;
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 
-use crate::entities::llm_provider::LLMProvider;
+use crate::entities::llm_provider::{LLMAnswer, LLMProvider};
 use crate::entities::proxy::LLMProxy;
 use crate::entities::system_prompt::SYSTEM_PROMPT;
 use crate::utils::client_builder_ext::ClientBuilderExt;
@@ -97,7 +97,7 @@ impl InitInteractive<OpenrouterProvider> for OpenrouterProvider {
 }
 
 impl LLMProvider for OpenrouterProvider {
-    fn ask(&self, prompt: impl AsRef<str>) -> anyhow::Result<String> {
+    fn ask(&self, prompt: impl AsRef<str>) -> anyhow::Result<LLMAnswer> {
         let model = self.model();
         let prompt = prompt.as_ref();
 
@@ -157,7 +157,9 @@ impl LLMProvider for OpenrouterProvider {
             );
         }
 
-        Ok(llm_response_message.message.content.to_owned())
+        Ok(LLMAnswer::Text(
+            llm_response_message.message.content.to_owned(),
+        ))
     }
 }
 

@@ -8,7 +8,7 @@ use yaml_serde::Value;
 
 use crate::controllers::controller::Controller;
 use crate::controllers::onboard::OnboardController;
-use crate::entities::llm_provider::LLMProvider;
+use crate::entities::llm_provider::{LLMAnswer, LLMProvider};
 use crate::entities::llm_provider_kind::LLMProviderKind;
 use crate::entities::placeholder::Placeholder;
 use crate::entities::prompt::FrondmatterKind::{self, Typed};
@@ -184,14 +184,11 @@ impl IndexController {
         println!("{}", skin.term_text(response.as_ref()));
     }
 
-    fn handle_prompt_response(prompt: &Prompt, response: impl AsRef<str>) {
-        if response.as_ref().trim().is_empty() {
-            println!("No response from LLM provider")
-        }
-
-        match prompt.frontmatter() {
-            None => Self::print_plain(response),
-            Some(frontmatter) => match frontmatter {
+    fn handle_prompt_response(prompt: &Prompt, response: &LLMAnswer) {
+        match (prompt.frontmatter(), response) {
+            (None, LLMAnswer::External) | (Some(_), LLMAnswer::External) => {}
+            (None, LLMAnswer::Text(response)) => Self::print_plain(response),
+            (Some(frontmatter), LLMAnswer::Text(response)) => match frontmatter {
                 Typed(typed_frontmatter) => match typed_frontmatter.output() {
                     RequestedOutputFormat::JSON => {
                         Self::print_with_highlight(response, RequestedOutputFormat::JSON)
@@ -228,7 +225,7 @@ impl IndexController {
             }
         }?;
 
-        Self::handle_prompt_response(&prompt, response.as_str());
+        Self::handle_prompt_response(&prompt, &response);
 
         Ok(())
     }
