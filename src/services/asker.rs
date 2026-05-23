@@ -16,6 +16,7 @@ impl Asker {
         let prompt = placeholder.prompt().unwrap_or(placeholder.name());
         let input = dialoguer::Input::<String>::new()
             .with_prompt(prompt)
+            .report(false)
             .allow_empty(false)
             .show_default(false)
             .default(String::default());

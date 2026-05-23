@@ -39,6 +39,7 @@ impl LLMProxy {
 impl InitInteractive<Option<LLMProxy>> for Option<LLMProxy> {
     fn init_interactive() -> anyhow::Result<Option<LLMProxy>> {
         let confirmed = dialoguer::Confirm::new()
+            .report(false)
             .with_prompt("Add proxy scheme?")
             .default(false)
             .show_default(true)

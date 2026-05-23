@@ -38,6 +38,8 @@ impl IndexController {
 
     fn pick_file(root: impl AsRef<Path>) -> anyhow::Result<PathBuf> {
         let file = dialoguer::FuzzySelect::new()
+            .report(false)
+            .clear(true)
             .pick_file(&root, |v| v.to_string_lossy().to_string().ends_with(".md"))?;
         file.ok_or_else(|| anyhow::Error::msg("Failed to pick file"))
     }
@@ -59,6 +61,8 @@ impl IndexController {
     fn select_provider_kind(config: &Config) -> anyhow::Result<&LLMProviderKind> {
         let providers: Vec<&LLMProviderKind> = config.providers().into_iter().collect();
         let idx = dialoguer::FuzzySelect::new()
+            .report(false)
+            .clear(true)
             .with_prompt("Select LLM provider")
             .default(0)
             .highlight_matches(true)

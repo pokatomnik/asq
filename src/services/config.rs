@@ -89,6 +89,7 @@ impl Config {
             providers.push(new_provider);
 
             proceed = dialoguer::Confirm::new()
+                .report(false)
                 .with_prompt("Add one more model?")
                 .default(false)
                 .show_default(true)
@@ -121,6 +122,8 @@ impl Config {
             LLMProviderKindOnly::DuckDuckGo,
         ];
         let kind_idx = dialoguer::FuzzySelect::new()
+            .report(false)
+            .clear(true)
             .with_prompt("Select LLM provider kind")
             .default(0)
             .highlight_matches(true)

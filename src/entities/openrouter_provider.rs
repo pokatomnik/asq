@@ -55,6 +55,7 @@ impl OpenrouterProvider {
 
     fn ask_name() -> anyhow::Result<String> {
         let result = dialoguer::Input::new()
+            .report(false)
             .with_prompt("Specify LLM provider name, example: \"Openrouter|gemma4:e4b\"")
             .interact()?;
         Ok(result)
