@@ -111,6 +111,25 @@ impl IndexController {
         Ok(compiled.prompt().to_string())
     }
 
+    fn prepare_raw_prompt(prompt: &str, raw: &str) -> anyhow::Result<String> {
+        let template = PromptTemplate::try_from(include_str!("./raw_frontmatter.md"))?;
+        let answers = {
+            let mut answers = HashMap::new();
+            answers.insert(
+                Placeholder::new("prompt", false, Option::<String>::None),
+                prompt.to_string(),
+            );
+            answers.insert(
+                Placeholder::new("raw", false, Option::<String>::None),
+                raw.to_string(),
+            );
+            answers
+        };
+        let compiled = template.compile(answers)?;
+
+        Ok(compiled.prompt().to_string())
+    }
+
     fn prepare_prompt(prompt: &Prompt) -> impl AsRef<str> {
         match (prompt.frontmatter(), prompt.prompt()) {
             (Some(frontmatter), prompt) => match frontmatter {
@@ -122,6 +141,8 @@ impl IndexController {
                     Self::prepare_untyped_prompt(prompt, untyped_frontmatter)
                         .unwrap_or_else(move |_| prompt.to_string())
                 }
+                FrondmatterKind::Raw(raw) => Self::prepare_raw_prompt(prompt, raw)
+                    .unwrap_or_else(move |_| prompt.to_string()),
             },
             (None, prompt) => prompt.to_string(),
         }
@@ -178,6 +199,7 @@ impl IndexController {
                     RequestedOutputFormat::Markdown => Self::print_markdown(response),
                 },
                 FrondmatterKind::Untyped(_) => Self::print_plain(response),
+                FrondmatterKind::Raw(_) => Self::print_plain(response),
             },
         }
     }
