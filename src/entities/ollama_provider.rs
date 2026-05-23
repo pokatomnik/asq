@@ -3,7 +3,7 @@ use std::cell::OnceCell;
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 
-use crate::entities::llm_provider::LLMProvider;
+use crate::entities::llm_provider::{LLMAnswer, LLMProvider};
 use crate::entities::proxy::LLMProxy;
 use crate::entities::system_prompt::SYSTEM_PROMPT;
 use crate::utils::client_builder_ext::ClientBuilderExt;
@@ -125,7 +125,7 @@ impl InitInteractive<OllamaProvider> for OllamaProvider {
 }
 
 impl LLMProvider for OllamaProvider {
-    fn ask(&self, prompt: impl AsRef<str>) -> anyhow::Result<String> {
+    fn ask(&self, prompt: impl AsRef<str>) -> anyhow::Result<LLMAnswer> {
         let model = self.model();
         let prompt = prompt.as_ref();
 
@@ -162,7 +162,7 @@ impl LLMProvider for OllamaProvider {
 
         let result: OllamaGenerateResponse = response.text()?.try_into()?;
 
-        Ok(result.response)
+        Ok(LLMAnswer::Text(result.response))
     }
 }
 
