@@ -19,6 +19,8 @@ impl ProvidersAddController {
             LLMProviderKindOnly::DuckDuckGo,
         ];
         let kind_idx = dialoguer::FuzzySelect::new()
+            .report(false)
+            .clear(true)
             .with_prompt("Select LLM provider kind")
             .default(0)
             .highlight_matches(true)

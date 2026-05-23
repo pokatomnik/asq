@@ -14,6 +14,7 @@ impl OnboardController {
 
     fn ask_overwrite() -> bool {
         dialoguer::Confirm::new()
+            .report(false)
             .with_prompt("Are you sure to overwrite config?")
             .default(false)
             .show_default(true)

@@ -15,6 +15,8 @@ impl ProvidersDeleteController {
             anyhow::bail!("You have no providers configured. Add a new one.")
         }
         let idx = dialoguer::FuzzySelect::new()
+            .report(false)
+            .clear(true)
             .with_prompt("Select LLM provider")
             .default(0)
             .highlight_matches(true)

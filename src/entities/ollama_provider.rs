@@ -59,6 +59,7 @@ impl OllamaProvider {
 
     fn ask_name() -> anyhow::Result<String> {
         let result = dialoguer::Input::new()
+            .report(false)
             .with_prompt("Specify LLM provider name, example: \"Ollama|gemma4:e4b\"")
             .interact()?;
         Ok(result)
@@ -66,6 +67,7 @@ impl OllamaProvider {
 
     fn ask_endpoint_url() -> anyhow::Result<String> {
         let result = dialoguer::Input::new()
+            .report(false)
             .with_prompt("Specify Ollama endpoint URL")
             .show_default(true)
             .default("http://127.0.0.1:11434".to_string())
@@ -76,6 +78,7 @@ impl OllamaProvider {
 
     fn ask_token_key() -> anyhow::Result<Option<String>> {
         let confirmed = dialoguer::Confirm::new()
+            .report(false)
             .with_prompt("Specify token?")
             .default(false)
             .show_default(true)
