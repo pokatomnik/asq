@@ -3,9 +3,9 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumDiscriminants;
 
-use crate::entities::duckduckgo_provider::DuckDuckGoProvider;
-use crate::entities::ollama_provider::OllamaProvider;
-use crate::entities::openrouter_provider::OpenrouterProvider;
+use crate::providers::duckduckgo::DuckDuckGoProvider;
+use crate::providers::ollama::OllamaProvider;
+use crate::providers::openrouter::OpenrouterProvider;
 use crate::utils::describe::Describe;
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumDiscriminants)]

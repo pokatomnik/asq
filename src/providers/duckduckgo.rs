@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::entities::llm_provider::{LLMAnswer, LLMProvider};
+use crate::providers::llm_provider::{LLMAnswer, LLMProvider};
 use crate::utils::describe::Describe;
 use crate::utils::init_interactive::InitInteractive;
 

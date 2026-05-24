@@ -1,9 +1,5 @@
 pub(crate) mod consts;
-pub(crate) mod duckduckgo_provider;
-pub(crate) mod llm_provider;
 pub(crate) mod llm_provider_kind;
-pub(crate) mod ollama_provider;
-pub(crate) mod openrouter_provider;
 pub(crate) mod placeholder;
 pub(crate) mod prompt;
 pub(crate) mod proxy;

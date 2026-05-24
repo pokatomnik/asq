@@ -4,9 +4,9 @@ use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 
 use crate::entities::consts::DEFAULT_TIMEOUT;
-use crate::entities::llm_provider::{LLMAnswer, LLMProvider};
 use crate::entities::proxy::LLMProxy;
 use crate::entities::system_prompt::SYSTEM_PROMPT;
+use crate::providers::llm_provider::{LLMAnswer, LLMProvider};
 use crate::utils::client_builder_ext::ClientBuilderExt;
 use crate::utils::describe::Describe;
 use crate::utils::init_interactive::InitInteractive;
