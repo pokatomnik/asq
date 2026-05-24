@@ -1,9 +1,5 @@
 use std::cell::OnceCell;
 
-use serde::Deserialize;
-
-use crate::entities::requested_output_format::RequestedOutputFormat;
-
 static FRONTMATTER_MARKER: &'static str = "---";
 
 pub(crate) struct Prompt {
@@ -11,20 +7,7 @@ pub(crate) struct Prompt {
     parsed: OnceCell<(Option<FrondmatterKind>, String)>,
 }
 
-#[derive(Clone, Deserialize)]
-pub(crate) struct TypedFrontmatter {
-    output: RequestedOutputFormat,
-}
-
-impl TypedFrontmatter {
-    pub fn output(&self) -> &RequestedOutputFormat {
-        &self.output
-    }
-}
-
 pub enum FrondmatterKind {
-    Typed(TypedFrontmatter),
-    Untyped(yaml_serde::Value),
     Raw(String),
 }
 
@@ -63,19 +46,6 @@ impl Prompt {
         let Some(frontmatter_raw) = maybe_frontmatter else {
             return (None, prompt);
         };
-
-        let typed_frontmatter = yaml_serde::from_str::<TypedFrontmatter>(frontmatter_raw.as_str());
-
-        if let Ok(typed_frontmatter) = typed_frontmatter {
-            return (Some(FrondmatterKind::Typed(typed_frontmatter)), prompt);
-        }
-
-        let untyped_frontmatter =
-            yaml_serde::from_str::<yaml_serde::Value>(frontmatter_raw.as_str());
-
-        if let Ok(untyped_frontmatter) = untyped_frontmatter {
-            return (Some(FrondmatterKind::Untyped(untyped_frontmatter)), prompt);
-        }
 
         if frontmatter_raw.trim().len() > 0 {
             return (

@@ -1,4 +1,0 @@
-{{ prompt }}
-```json
-{{ format }}
-```

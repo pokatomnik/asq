@@ -6,5 +6,4 @@ pub(crate) mod openrouter_provider;
 pub(crate) mod placeholder;
 pub(crate) mod prompt;
 pub(crate) mod proxy;
-pub(crate) mod requested_output_format;
 pub(crate) mod system_prompt;
