@@ -334,6 +334,6 @@ struct OpenrouterModelsResponse {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct ModelDescription {
-    pub id: String,
-    pub name: String,
+    id: String,
+    name: String,
 }
