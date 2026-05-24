@@ -3,14 +3,14 @@ use std::{cell::OnceCell, fmt::Display};
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    entities::{consts::DEFAULT_TIMEOUT, proxy::LLMProxy, system_prompt::SYSTEM_PROMPT},
-    providers::llm_provider::{LLMAnswer, LLMProvider, ModelsResponse},
-    utils::{
-        client_builder_ext::ClientBuilderExt, describe::Describe,
-        init_interactive::InitInteractive, request_builder_ext::RequestBuilderExt,
-    },
-};
+use crate::entities::consts::DEFAULT_TIMEOUT;
+use crate::entities::proxy::LLMProxy;
+use crate::entities::system_prompt::SYSTEM_PROMPT;
+use crate::providers::llm_provider::{LLMAnswer, LLMProvider, ModelsResponse};
+use crate::utils::client_builder_ext::ClientBuilderExt;
+use crate::utils::describe::Describe;
+use crate::utils::init_interactive::InitInteractive;
+use crate::utils::request_builder_ext::RequestBuilderExt;
 
 static API_URL: &'static str = "https://api.deepseek.com";
 
