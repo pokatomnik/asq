@@ -1,3 +1,4 @@
+pub(crate) mod deepseek;
 pub(crate) mod duckduckgo;
 pub(crate) mod llm_provider;
 pub(crate) mod ollama;

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
+use crate::providers::deepseek::DeepseekProvider;
 use crate::providers::duckduckgo::DuckDuckGoProvider;
 use crate::providers::ollama::OllamaProvider;
 use crate::providers::openrouter::OpenrouterProvider;
@@ -112,6 +113,9 @@ impl Config {
             LLMProviderKindOnly::DuckDuckGo => Ok(LLMProviderKind::DuckDuckGo(
                 DuckDuckGoProvider::init_interactive()?,
             )),
+            LLMProviderKindOnly::Deepseek => Ok(LLMProviderKind::Deepseek(
+                DeepseekProvider::init_interactive()?,
+            )),
         }
     }
 
@@ -119,6 +123,7 @@ impl Config {
         let all_kinds = vec![
             LLMProviderKindOnly::Ollama,
             LLMProviderKindOnly::Openrouter,
+            LLMProviderKindOnly::Deepseek,
             LLMProviderKindOnly::DuckDuckGo,
         ];
         let kind_idx = dialoguer::FuzzySelect::new()

@@ -1,22 +1,21 @@
-use std::cell::OnceCell;
-use std::fmt::Display;
+use std::{cell::OnceCell, fmt::Display};
 
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 
-use crate::entities::consts::DEFAULT_TIMEOUT;
-use crate::entities::proxy::LLMProxy;
-use crate::entities::system_prompt::SYSTEM_PROMPT;
-use crate::providers::llm_provider::{LLMAnswer, LLMProvider, ModelsResponse};
-use crate::utils::client_builder_ext::ClientBuilderExt;
-use crate::utils::describe::Describe;
-use crate::utils::init_interactive::InitInteractive;
-use crate::utils::request_builder_ext::RequestBuilderExt;
+use crate::{
+    entities::{consts::DEFAULT_TIMEOUT, proxy::LLMProxy, system_prompt::SYSTEM_PROMPT},
+    providers::llm_provider::{LLMAnswer, LLMProvider, ModelsResponse},
+    utils::{
+        client_builder_ext::ClientBuilderExt, describe::Describe,
+        init_interactive::InitInteractive, request_builder_ext::RequestBuilderExt,
+    },
+};
 
-static API_URL: &'static str = "https://openrouter.ai";
+static API_URL: &'static str = "https://api.deepseek.com";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub(crate) struct OpenrouterProvider {
+pub(crate) struct DeepseekProvider {
     #[serde(rename = "name")]
     name: String,
 
@@ -33,7 +32,7 @@ pub(crate) struct OpenrouterProvider {
     proxy: Option<LLMProxy>,
 }
 
-impl OpenrouterProvider {
+impl DeepseekProvider {
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -57,7 +56,7 @@ impl OpenrouterProvider {
     fn ask_name() -> anyhow::Result<String> {
         let result = dialoguer::Input::new()
             .report(false)
-            .with_prompt("Specify LLM provider name, example: \"Openrouter|gemma4:e4b\"")
+            .with_prompt("Specify LLM provider name, example: \"Deepseek|deepseek-flash\"")
             .interact()?;
         Ok(result)
     }
@@ -66,7 +65,7 @@ impl OpenrouterProvider {
         let token = dialoguer::Input::<String>::new()
             .with_prompt("Ask never store secure keys inside plaintext configuration files. We ask you to provide env vaiable to obtain It")
             .report(false)
-            .default("OPENROUTER_API_KEY".to_string())
+            .default("DEEPSEEK_API_KEY".to_string())
             .show_default(true)
             .interact()?;
 
@@ -74,7 +73,7 @@ impl OpenrouterProvider {
     }
 
     fn ask_model(token: Option<&str>, proxy: Option<LLMProxy>) -> anyhow::Result<String> {
-        let models = Self::list_models(format!("{API_URL}/api/v1/models"), token, proxy)?;
+        let models = Self::list_models(format!("{API_URL}/models"), token, proxy)?;
         let ModelsResponse::Models(models) = models else {
             anyhow::bail!("Cannot select model")
         };
@@ -95,8 +94,8 @@ impl OpenrouterProvider {
     }
 }
 
-impl InitInteractive<OpenrouterProvider> for OpenrouterProvider {
-    fn init_interactive() -> anyhow::Result<OpenrouterProvider> {
+impl InitInteractive<DeepseekProvider> for DeepseekProvider {
+    fn init_interactive() -> anyhow::Result<DeepseekProvider> {
         let name = Self::ask_name()?;
         let token_key = Self::ask_token_key()?;
         let token = token_key.as_ref().and_then(|tk| std::env::var(tk).ok());
@@ -115,7 +114,7 @@ impl InitInteractive<OpenrouterProvider> for OpenrouterProvider {
     }
 }
 
-impl LLMProvider for OpenrouterProvider {
+impl LLMProvider for DeepseekProvider {
     fn ask(&self, prompt: impl AsRef<str>) -> anyhow::Result<LLMAnswer> {
         let model = self.model();
         let prompt = prompt.as_ref();
@@ -140,7 +139,7 @@ impl LLMProvider for OpenrouterProvider {
 
         let token = self.auth_token();
         let request_builder = client
-            .request(Method::POST, format!("{API_URL}/api/v1/chat/completions"))
+            .request(Method::POST, format!("{API_URL}/chat/completions"))
             .application_json()
             .with_optional_bearer_token(token);
 
@@ -148,26 +147,26 @@ impl LLMProvider for OpenrouterProvider {
 
         if response.status() != StatusCode::OK {
             anyhow::bail!(format!(
-                "Openrouter responded with status:{}",
+                "Deepseek responded with status: {}",
                 response.status()
             ))
         }
 
-        let result: OpenrouterGenerateResponse = response.text()?.try_into()?;
+        let result: DeepseekGenerateResponse = response.text()?.try_into()?;
 
         let llm_response_message = result
             .choices
             .get(0)
             .ok_or_else(|| anyhow::Error::msg("No response from model"))?;
 
-        if llm_response_message.finish_reason != OpenrouterGenerateResponseFinishReason::Stop {
+        if llm_response_message.finish_reason != DeepseekGenerateResponseFinishReason::Stop {
             anyhow::bail!(
                 "Unexpected LLM response: {}",
                 llm_response_message.finish_reason
             );
         }
 
-        if llm_response_message.message.role != OpenrouterGenerateResponseRole::Assistant {
+        if llm_response_message.message.role != DeepseekGenerateResponseRole::Assistant {
             anyhow::bail!(
                 "Unexpected LLM response role: {}",
                 llm_response_message.message.role
@@ -197,7 +196,7 @@ impl LLMProvider for OpenrouterProvider {
 
         let result_json = response.text()?;
 
-        let parsed_result = serde_json::from_str::<OpenrouterModelsResponse>(result_json.as_str())?;
+        let parsed_result = serde_json::from_str::<DeepseekModelsResponse>(result_json.as_str())?;
         let model_names = parsed_result
             .data
             .iter()
@@ -209,39 +208,39 @@ impl LLMProvider for OpenrouterProvider {
 }
 
 #[derive(serde::Deserialize)]
-struct OpenrouterGenerateResponse {
+struct DeepseekGenerateResponse {
     #[serde(rename = "model")]
     #[allow(unused)]
     model: String,
 
     #[serde(rename = "choices")]
-    choices: Vec<OpenrouterGenerateResponseChoice>,
+    choices: Vec<DeepseekGenerateResponseChoice>,
 }
 
 #[derive(serde::Deserialize)]
-struct OpenrouterGenerateResponseChoice {
+struct DeepseekGenerateResponseChoice {
     #[serde(rename = "index")]
     #[allow(unused)]
     index: usize,
 
     #[serde(rename = "finish_reason")]
-    finish_reason: OpenrouterGenerateResponseFinishReason,
+    finish_reason: DeepseekGenerateResponseFinishReason,
 
     #[serde(rename = "message")]
-    message: OpenrouterGenerateResponseMessage,
+    message: DeepseekGenerateResponseMessage,
 }
 
 #[derive(serde::Deserialize)]
-struct OpenrouterGenerateResponseMessage {
+struct DeepseekGenerateResponseMessage {
     #[serde(rename = "role")]
-    role: OpenrouterGenerateResponseRole,
+    role: DeepseekGenerateResponseRole,
 
     #[serde(rename = "content")]
     content: String,
 }
 
 #[derive(serde::Deserialize, Clone, Debug, Copy, PartialEq, Eq)]
-enum OpenrouterGenerateResponseRole {
+enum DeepseekGenerateResponseRole {
     #[serde(rename = "system")]
     System,
 
@@ -252,18 +251,18 @@ enum OpenrouterGenerateResponseRole {
     User,
 }
 
-impl Display for OpenrouterGenerateResponseRole {
+impl Display for DeepseekGenerateResponseRole {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OpenrouterGenerateResponseRole::System => f.write_str("system"),
-            OpenrouterGenerateResponseRole::Assistant => f.write_str("assistant"),
-            OpenrouterGenerateResponseRole::User => f.write_str("user"),
+            DeepseekGenerateResponseRole::System => f.write_str("system"),
+            DeepseekGenerateResponseRole::Assistant => f.write_str("assistant"),
+            DeepseekGenerateResponseRole::User => f.write_str("user"),
         }
     }
 }
 
 #[derive(serde::Deserialize, Clone, Copy, PartialEq, PartialOrd)]
-enum OpenrouterGenerateResponseFinishReason {
+enum DeepseekGenerateResponseFinishReason {
     #[serde(rename = "stop")]
     Stop,
 
@@ -280,19 +279,19 @@ enum OpenrouterGenerateResponseFinishReason {
     Error,
 }
 
-impl Display for OpenrouterGenerateResponseFinishReason {
+impl Display for DeepseekGenerateResponseFinishReason {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            OpenrouterGenerateResponseFinishReason::Stop => f.write_str("stop"),
-            OpenrouterGenerateResponseFinishReason::Length => f.write_str("length"),
-            OpenrouterGenerateResponseFinishReason::ToolCalls => f.write_str("tool_calls"),
-            OpenrouterGenerateResponseFinishReason::ContentFilter => f.write_str("content_filter"),
-            OpenrouterGenerateResponseFinishReason::Error => f.write_str("error"),
+            DeepseekGenerateResponseFinishReason::Stop => f.write_str("stop"),
+            DeepseekGenerateResponseFinishReason::Length => f.write_str("length"),
+            DeepseekGenerateResponseFinishReason::ToolCalls => f.write_str("tool_calls"),
+            DeepseekGenerateResponseFinishReason::ContentFilter => f.write_str("content_filter"),
+            DeepseekGenerateResponseFinishReason::Error => f.write_str("error"),
         }
     }
 }
 
-impl Describe for OpenrouterProvider {
+impl Describe for DeepseekProvider {
     fn describe(&self) -> String {
         let mut result = String::with_capacity(50);
 
@@ -318,22 +317,21 @@ impl Describe for OpenrouterProvider {
     }
 }
 
-impl TryFrom<String> for OpenrouterGenerateResponse {
+impl TryFrom<String> for DeepseekGenerateResponse {
     type Error = anyhow::Error;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        let result = serde_json::from_str::<OpenrouterGenerateResponse>(value.as_str())?;
+        let result = serde_json::from_str::<DeepseekGenerateResponse>(value.as_str())?;
         Ok(result)
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct OpenrouterModelsResponse {
+struct DeepseekModelsResponse {
     data: Vec<ModelDescription>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct ModelDescription {
     id: String,
-    name: String,
 }
