@@ -3,6 +3,7 @@ use std::cell::OnceCell;
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 
+use crate::entities::consts::DEFAULT_TIMEOUT;
 use crate::entities::llm_provider::{LLMAnswer, LLMProvider};
 use crate::entities::proxy::LLMProxy;
 use crate::entities::system_prompt::SYSTEM_PROMPT;
@@ -140,6 +141,7 @@ impl LLMProvider for OllamaProvider {
         let body_json_str = serde_json::to_string(&body)?;
 
         let client = reqwest::blocking::ClientBuilder::new()
+            .timeout(DEFAULT_TIMEOUT)
             .with_optional_proxy(self.proxy().as_ref())
             .build()?;
 
