@@ -129,6 +129,9 @@ impl InitInteractive<OllamaProvider> for OllamaProvider {
         let endpoint_url = Self::ask_endpoint_url()?;
         let token_key = Self::ask_token_key()?;
         let token = token_key.as_ref().and_then(|tk| std::env::var(tk).ok());
+        if token.is_none() {
+            anyhow::bail!("Cannot obtain token");
+        }
         let proxy_scheme = Option::<LLMProxy>::init_interactive()?;
         let ask_model_url = format!("{}/api/tags", endpoint_url);
         let model = Self::ask_model(ask_model_url, token.as_deref(), proxy_scheme.clone())?;

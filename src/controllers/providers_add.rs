@@ -2,6 +2,7 @@ use clap::Args;
 
 use crate::controllers::controller::Controller;
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
+use crate::providers::deepseek::DeepseekProvider;
 use crate::providers::duckduckgo::DuckDuckGoProvider;
 use crate::providers::ollama::OllamaProvider;
 use crate::providers::openrouter::OpenrouterProvider;
@@ -16,6 +17,7 @@ impl ProvidersAddController {
         let all_kinds = vec![
             LLMProviderKindOnly::Ollama,
             LLMProviderKindOnly::Openrouter,
+            LLMProviderKindOnly::Deepseek,
             LLMProviderKindOnly::DuckDuckGo,
         ];
         let kind_idx = dialoguer::FuzzySelect::new()
@@ -44,6 +46,9 @@ impl Controller for ProvidersAddController {
             }
             LLMProviderKindOnly::DuckDuckGo => {
                 LLMProviderKind::DuckDuckGo(DuckDuckGoProvider::init_interactive()?)
+            }
+            LLMProviderKindOnly::Deepseek => {
+                LLMProviderKind::Deepseek(DeepseekProvider::init_interactive()?)
             }
         };
         let mut config = Config::try_read()?;

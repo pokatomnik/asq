@@ -137,6 +137,9 @@ impl IndexController {
                     LLMProviderKind::DuckDuckGo(duckduckgo_provider) => {
                         duckduckgo_provider.ask(prompt_text)
                     }
+                    LLMProviderKind::Deepseek(deepseek_provider) => {
+                        deepseek_provider.ask(prompt_text)
+                    }
                 },
             )?;
 
