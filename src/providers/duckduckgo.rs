@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::providers::llm_provider::{LLMAnswer, LLMProvider};
+use crate::entities::proxy::LLMProxy;
+use crate::providers::llm_provider::{LLMAnswer, LLMProvider, ModelsResponse};
 use crate::utils::describe::Describe;
 use crate::utils::init_interactive::InitInteractive;
 
@@ -29,6 +30,14 @@ impl LLMProvider for DuckDuckGoProvider {
     fn ask(&self, prompt: impl AsRef<str>) -> anyhow::Result<LLMAnswer> {
         open::that(Self::format_url(prompt))?;
         Ok(LLMAnswer::External)
+    }
+
+    fn list_models(
+        _: impl AsRef<str>,
+        _: Option<&str>,
+        _: Option<LLMProxy>,
+    ) -> anyhow::Result<ModelsResponse> {
+        return Ok(ModelsResponse::IntentionallyNoModels);
     }
 }
 

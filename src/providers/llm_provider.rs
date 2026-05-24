@@ -1,3 +1,5 @@
+use crate::entities::proxy::LLMProxy;
+
 pub(crate) enum LLMAnswer {
     /// An answer from the LLM that needs to be output to the terminal.
     Text(String),
@@ -8,6 +10,17 @@ pub(crate) enum LLMAnswer {
     External,
 }
 
+pub(crate) enum ModelsResponse {
+    Models(Vec<String>),
+    IntentionallyNoModels,
+}
+
 pub(crate) trait LLMProvider {
     fn ask(&self, prompt: impl AsRef<str>) -> anyhow::Result<LLMAnswer>;
+
+    fn list_models(
+        endpoint_url: impl AsRef<str>,
+        token: Option<&str>,
+        proxy: Option<LLMProxy>,
+    ) -> anyhow::Result<ModelsResponse>;
 }

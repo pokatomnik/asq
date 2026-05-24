@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::entities::consts::DEFAULT_TIMEOUT;
 use crate::entities::proxy::LLMProxy;
 use crate::entities::system_prompt::SYSTEM_PROMPT;
-use crate::providers::llm_provider::{LLMAnswer, LLMProvider};
+use crate::providers::llm_provider::{LLMAnswer, LLMProvider, ModelsResponse};
 use crate::utils::client_builder_ext::ClientBuilderExt;
 use crate::utils::describe::Describe;
 use crate::utils::init_interactive::InitInteractive;
@@ -73,11 +73,25 @@ impl OpenrouterProvider {
         return Ok(Some(token));
     }
 
-    fn ask_model() -> anyhow::Result<String> {
-        let model = dialoguer::Input::<String>::new()
+    fn ask_model(token: Option<&str>, proxy: Option<LLMProxy>) -> anyhow::Result<String> {
+        let models = Self::list_models("{API_URL}/api/v1/models", token, proxy)?;
+        let ModelsResponse::Models(models) = models else {
+            anyhow::bail!("Cannot select model")
+        };
+
+        let model_idx = dialoguer::FuzzySelect::new()
+            .report(false)
+            .clear(true)
             .with_prompt("Specify model")
+            .items(&models)
+            .default(0)
+            .highlight_matches(true)
             .interact()?;
-        Ok(model)
+
+        let Some(model) = &models.get(model_idx) else {
+            anyhow::bail!("Cannot select model");
+        };
+        Ok(model.to_owned().to_owned())
     }
 }
 
@@ -85,8 +99,9 @@ impl InitInteractive<OpenrouterProvider> for OpenrouterProvider {
     fn init_interactive() -> anyhow::Result<OpenrouterProvider> {
         let name = Self::ask_name()?;
         let token_key = Self::ask_token_key()?;
-        let model = Self::ask_model()?;
+        let token = token_key.as_ref().and_then(|tk| std::env::var(tk).ok());
         let proxy_scheme = Option::<LLMProxy>::init_interactive()?;
+        let model = Self::ask_model(token.as_deref(), proxy_scheme.clone())?;
         Ok(Self {
             name,
             auth_token_env_key: token_key,
@@ -162,6 +177,34 @@ impl LLMProvider for OpenrouterProvider {
         Ok(LLMAnswer::Text(
             llm_response_message.message.content.to_owned(),
         ))
+    }
+
+    fn list_models(
+        endpoint_url: impl AsRef<str>,
+        token: Option<&str>,
+        proxy: Option<LLMProxy>,
+    ) -> anyhow::Result<ModelsResponse> {
+        let client = reqwest::blocking::ClientBuilder::new()
+            .timeout(DEFAULT_TIMEOUT)
+            .with_optional_proxy(proxy)
+            .build()?;
+
+        let response = client
+            .request(Method::GET, endpoint_url.as_ref())
+            .application_json()
+            .with_optional_bearer_token(token)
+            .send()?;
+
+        let result_json = response.text()?;
+
+        let parsed_result = serde_json::from_str::<OpenrouterModelsResponse>(result_json.as_str())?;
+        let model_names = parsed_result
+            .data
+            .iter()
+            .map(|v| v.id.to_owned())
+            .collect::<Vec<String>>();
+
+        Ok(ModelsResponse::Models(model_names))
     }
 }
 
@@ -282,4 +325,15 @@ impl TryFrom<String> for OpenrouterGenerateResponse {
         let result = serde_json::from_str::<OpenrouterGenerateResponse>(value.as_str())?;
         Ok(result)
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OpenrouterModelsResponse {
+    data: Vec<ModelDescription>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct ModelDescription {
+    id: String,
+    name: String,
 }
