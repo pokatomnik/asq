@@ -1,3 +1,4 @@
+pub(crate) mod consts;
 pub(crate) mod duckduckgo_provider;
 pub(crate) mod llm_provider;
 pub(crate) mod llm_provider_kind;
