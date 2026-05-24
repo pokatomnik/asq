@@ -74,7 +74,7 @@ impl OpenrouterProvider {
     }
 
     fn ask_model(token: Option<&str>, proxy: Option<LLMProxy>) -> anyhow::Result<String> {
-        let models = Self::list_models("{API_URL}/api/v1/models", token, proxy)?;
+        let models = Self::list_models(format!("{API_URL}/api/v1/models"), token, proxy)?;
         let ModelsResponse::Models(models) = models else {
             anyhow::bail!("Cannot select model")
         };
@@ -148,7 +148,7 @@ impl LLMProvider for OpenrouterProvider {
 
         if response.status() != StatusCode::OK {
             anyhow::bail!(format!(
-                "Ollama responded with status:{}",
+                "Openrouter responded with status:{}",
                 response.status()
             ))
         }
