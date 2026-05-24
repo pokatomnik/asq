@@ -9,6 +9,7 @@ use crate::controllers::index::IndexController;
 mod cmd;
 mod controllers;
 mod entities;
+mod providers;
 mod services;
 mod utils;
 

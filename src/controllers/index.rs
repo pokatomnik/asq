@@ -6,10 +6,10 @@ use termimad::MadSkin;
 
 use crate::controllers::controller::Controller;
 use crate::controllers::onboard::OnboardController;
-use crate::entities::llm_provider::{LLMAnswer, LLMProvider};
 use crate::entities::llm_provider_kind::LLMProviderKind;
 use crate::entities::placeholder::Placeholder;
 use crate::entities::prompt::{FrondmatterKind, Prompt};
+use crate::providers::llm_provider::{LLMAnswer, LLMProvider};
 use crate::services::asker::Asker;
 use crate::services::config::Config;
 use crate::services::prompt_template::PromptTemplate;

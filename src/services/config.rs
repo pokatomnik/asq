@@ -2,10 +2,10 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::entities::duckduckgo_provider::DuckDuckGoProvider;
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
-use crate::entities::ollama_provider::OllamaProvider;
-use crate::entities::openrouter_provider::OpenrouterProvider;
+use crate::providers::duckduckgo::DuckDuckGoProvider;
+use crate::providers::ollama::OllamaProvider;
+use crate::providers::openrouter::OpenrouterProvider;
 use crate::utils::fileman;
 use crate::utils::init_interactive::InitInteractive;
 
