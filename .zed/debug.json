@@ -4,7 +4,7 @@
 // see: https://zed.dev/docs/debugger
 [
   {
-    "label": "asq:debug",
+    "label": "asq:debug_ask",
     "build": {
       "command": "cargo",
       "args": ["build"],
@@ -14,6 +14,18 @@
     "sourceLanguages": ["rust"],
     "request": "launch",
     "adapter": "CodeLLDB",
-    // "args": ["providers", "add"],
+  },
+  {
+    "label": "asq:debug_add",
+    "build": {
+      "command": "cargo",
+      "args": ["build"],
+    },
+    "program": "$ZED_WORKTREE_ROOT/target/debug/asq",
+    // sourceLanguages is required for CodeLLDB (not GDB) when using Rust
+    "sourceLanguages": ["rust"],
+    "request": "launch",
+    "adapter": "CodeLLDB",
+    "args": ["providers", "add"],
   },
 ]

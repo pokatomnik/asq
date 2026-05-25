@@ -6,6 +6,7 @@ use strum_macros::EnumDiscriminants;
 use crate::providers::deepseek::DeepseekProvider;
 use crate::providers::duckduckgo::DuckDuckGoProvider;
 use crate::providers::ollama::OllamaProvider;
+use crate::providers::openai_like::OpenAILikeProvider;
 use crate::providers::openrouter::OpenrouterProvider;
 use crate::utils::describe::Describe;
 
@@ -21,6 +22,7 @@ pub(crate) enum LLMProviderKind {
     Openrouter(OpenrouterProvider),
     DuckDuckGo(DuckDuckGoProvider),
     Deepseek(DeepseekProvider),
+    OpenAILike(OpenAILikeProvider),
 }
 
 impl AsRef<LLMProviderKind> for LLMProviderKind {
@@ -36,6 +38,7 @@ impl Describe for LLMProviderKind {
             LLMProviderKind::Openrouter(openrouter_provider) => openrouter_provider.describe(),
             LLMProviderKind::DuckDuckGo(duckduckgo_provider) => duckduckgo_provider.describe(),
             LLMProviderKind::Deepseek(deepseek_provider) => deepseek_provider.describe(),
+            LLMProviderKind::OpenAILike(openai_like_provider) => openai_like_provider.describe(),
         }
     }
 }
@@ -51,6 +54,9 @@ impl Display for LLMProviderKind {
                 f.write_str(duckduckgo_provider.name())
             }
             LLMProviderKind::Deepseek(deepseek_provider) => f.write_str(deepseek_provider.name()),
+            LLMProviderKind::OpenAILike(openai_like_provider) => {
+                f.write_str(openai_like_provider.name())
+            }
         }
     }
 }
@@ -62,6 +68,7 @@ impl Display for LLMProviderKindOnly {
             LLMProviderKindOnly::Openrouter => f.write_str("Openrouter"),
             LLMProviderKindOnly::DuckDuckGo => f.write_str("DuckDuckGo (Browser)"),
             LLMProviderKindOnly::Deepseek => f.write_str("Deepseek"),
+            LLMProviderKindOnly::OpenAILike => f.write_str("OpenAI-like"),
         }
     }
 }
