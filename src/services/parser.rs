@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use crate::services::{
-    code_executor::{self, CodeExecutor},
-    pipe_processor::{self, PipeProcessor},
-};
+use crate::services::code_executor::CodeExecutor;
+use crate::services::pipe_operators::{editor, fetch, file, input, lowercase};
+use crate::services::pipe_processor::PipeProcessor;
 
 static OPEN_CODE_TOKEN: char = '{';
 static CLOSE_CODE_TOKEN: char = '}';
@@ -29,9 +28,14 @@ pub(crate) struct Parser {
 }
 
 impl Parser {
-    pub fn new() -> Self {
+    pub fn try_create() -> anyhow::Result<Self> {
         let pipe_processor = Arc::new(PipeProcessor::default());
-        Self { pipe_processor }
+        pipe_processor.register_operator("lower", lowercase)?;
+        pipe_processor.register_operator("fetch", fetch)?;
+        pipe_processor.register_operator("file", file)?;
+        pipe_processor.register_operator("input", input)?;
+        pipe_processor.register_operator("editor", editor)?;
+        Ok(Self { pipe_processor })
     }
 
     fn tokenize(&self, source: &str) -> anyhow::Result<Vec<Part>> {
@@ -154,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_compile_prefix() {
-        let parser = Parser::new();
+        let parser = Parser::try_create().unwrap();
         let result = parser
             .compile_template("{{ \"SMART ASS\" | lower }} said: fuck you")
             .unwrap();
@@ -164,7 +168,7 @@ mod tests {
 
     #[test]
     fn test_compile_suffix() {
-        let parser = Parser::new();
+        let parser = Parser::try_create().unwrap();
         let result = parser
             .compile_template("hello, {{ WORLD | lower }}")
             .unwrap();
@@ -174,7 +178,7 @@ mod tests {
 
     #[test]
     fn test_compile_prefix_suffix() {
-        let parser = Parser::new();
+        let parser = Parser::try_create().unwrap();
         let result = parser
             .compile_template("Hi, this is {{ SHIT | lower }} around here")
             .unwrap();
@@ -183,14 +187,14 @@ mod tests {
 
     #[test]
     fn test_incorrect_bracers() {
-        let parser = Parser::new();
+        let parser = Parser::try_create().unwrap();
         let result = parser.compile_template("Hi, this is {{ { SHIT | lower }} around here");
         assert_eq!(result.is_err(), true)
     }
 
     #[test]
     fn test_nested_bracers() {
-        let parser = Parser::new();
+        let parser = Parser::try_create().unwrap();
         let result =
             parser.compile_template("Hi, this is {{ SHIT | lower {{ WTF }} }} around here");
         assert_eq!(result.is_err(), true)
@@ -198,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_no_spaces() {
-        let parser = Parser::new();
+        let parser = Parser::try_create().unwrap();
         let result = parser
             .compile_template("Hi, this is {{SHIT|lower}} around here")
             .unwrap();
