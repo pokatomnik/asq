@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use clap::Args;
-use termimad::MadSkin;
 
 use crate::controllers::controller::Controller;
 use crate::controllers::onboard::OnboardController;
@@ -102,8 +101,8 @@ impl IndexController {
     }
 
     fn print_markdown(response: impl AsRef<str>) {
-        let skin = MadSkin::default();
-        println!("{}", skin.term_text(response.as_ref()));
+        let output = marcli::render(response.as_ref(), &Default::default());
+        println!("{}", output);
     }
 
     fn handle_prompt_response(prompt: &Prompt, response: &LLMAnswer) {
