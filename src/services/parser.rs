@@ -93,7 +93,7 @@ impl Parser {
         Ok(result)
     }
 
-    fn compile_template(&self, source: impl AsRef<str>) -> anyhow::Result<String> {
+    pub fn compile(&self, source: impl AsRef<str>) -> anyhow::Result<String> {
         let tokens = self.tokenize(source.as_ref())?;
         let mut result = String::with_capacity(source.as_ref().len());
         for token in tokens {
@@ -160,7 +160,7 @@ mod tests {
     fn test_compile_prefix() {
         let parser = Parser::try_create().unwrap();
         let result = parser
-            .compile_template("{{ \"SMART ASS\" | lower }} said: fuck you")
+            .compile("{{ \"SMART ASS\" | lower }} said: fuck you")
             .unwrap();
 
         assert_eq!(result, "smart ass said: fuck you");
@@ -169,9 +169,7 @@ mod tests {
     #[test]
     fn test_compile_suffix() {
         let parser = Parser::try_create().unwrap();
-        let result = parser
-            .compile_template("hello, {{ WORLD | lower }}")
-            .unwrap();
+        let result = parser.compile("hello, {{ WORLD | lower }}").unwrap();
 
         assert_eq!(result, "hello, world")
     }
@@ -180,7 +178,7 @@ mod tests {
     fn test_compile_prefix_suffix() {
         let parser = Parser::try_create().unwrap();
         let result = parser
-            .compile_template("Hi, this is {{ SHIT | lower }} around here")
+            .compile("Hi, this is {{ SHIT | lower }} around here")
             .unwrap();
         assert_eq!(result, "Hi, this is shit around here");
     }
@@ -188,15 +186,14 @@ mod tests {
     #[test]
     fn test_incorrect_bracers() {
         let parser = Parser::try_create().unwrap();
-        let result = parser.compile_template("Hi, this is {{ { SHIT | lower }} around here");
+        let result = parser.compile("Hi, this is {{ { SHIT | lower }} around here");
         assert_eq!(result.is_err(), true)
     }
 
     #[test]
     fn test_nested_bracers() {
         let parser = Parser::try_create().unwrap();
-        let result =
-            parser.compile_template("Hi, this is {{ SHIT | lower {{ WTF }} }} around here");
+        let result = parser.compile("Hi, this is {{ SHIT | lower {{ WTF }} }} around here");
         assert_eq!(result.is_err(), true)
     }
 
@@ -204,7 +201,7 @@ mod tests {
     fn test_no_spaces() {
         let parser = Parser::try_create().unwrap();
         let result = parser
-            .compile_template("Hi, this is {{SHIT|lower}} around here")
+            .compile("Hi, this is {{SHIT|lower}} around here")
             .unwrap();
         assert_eq!(result, "Hi, this is shit around here")
     }
