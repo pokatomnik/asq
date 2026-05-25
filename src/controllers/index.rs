@@ -139,6 +139,9 @@ impl IndexController {
                     LLMProviderKind::Deepseek(deepseek_provider) => {
                         deepseek_provider.ask(prompt_text)
                     }
+                    LLMProviderKind::OpenAILike(openai_like_provider) => {
+                        openai_like_provider.ask(prompt_text)
+                    }
                 },
             )?;
 
