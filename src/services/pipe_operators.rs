@@ -113,6 +113,23 @@ pub(crate) fn editor(prompt: &str) -> anyhow::Result<String> {
     Ok(result.unwrap_or_default())
 }
 
+/// Converts HTML to text using readability parsing.
+///
+/// # Arguments
+///
+/// * `input` - The HTML content to convert.
+///
+/// # Returns
+///
+/// A `String` containing the converted text content.
+///
+/// # Examples
+///
+/// ```
+/// let html = "<h1>Hello</h1><p>world</p>";
+/// let result = htm2text(html).unwrap();
+/// assert!(result.contains("Hello"));
+/// ```
 pub(crate) fn htm2text(input: &str) -> anyhow::Result<String> {
     let config = Config {
         text_mode: TextMode::Markdown,
