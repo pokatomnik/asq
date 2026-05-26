@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::services::code_executor::CodeExecutor;
-use crate::services::pipe_operators::{editor, fetch, file, input, lowercase};
+use crate::services::pipe_operators::{editor, fetch, file, htm2text, input, lowercase};
 use crate::services::pipe_processor::PipeProcessor;
 
 static OPEN_CODE_TOKEN: char = '{';
@@ -28,13 +28,21 @@ pub(crate) struct Parser {
 }
 
 impl Parser {
-    pub fn try_create() -> anyhow::Result<Self> {
+    fn build_pipe_processor() -> anyhow::Result<Arc<PipeProcessor>> {
         let pipe_processor = Arc::new(PipeProcessor::default());
+
         pipe_processor.register_operator("lower", lowercase)?;
         pipe_processor.register_operator("fetch", fetch)?;
         pipe_processor.register_operator("file", file)?;
         pipe_processor.register_operator("input", input)?;
         pipe_processor.register_operator("editor", editor)?;
+        pipe_processor.register_operator("htm2text", htm2text)?;
+
+        Ok(pipe_processor)
+    }
+
+    pub fn try_create() -> anyhow::Result<Self> {
+        let pipe_processor = Self::build_pipe_processor()?;
         Ok(Self { pipe_processor })
     }
 
