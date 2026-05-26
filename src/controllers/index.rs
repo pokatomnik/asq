@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use clap::Args;
 
@@ -9,6 +10,7 @@ use crate::entities::prompt::{FrondmatterKind, Prompt};
 use crate::providers::llm_provider::{LLMAnswer, LLMProvider};
 use crate::services::config::Config;
 use crate::services::parser::Parser;
+use crate::services::template_env::TemplateEnv;
 use crate::utils::file_picker::FilePicker;
 use crate::utils::with_spinner::with_spinner;
 
@@ -42,11 +44,11 @@ impl IndexController {
         Ok(result)
     }
 
-    fn select_template(config: &Config) -> anyhow::Result<String> {
+    fn select_template(config: &Config) -> anyhow::Result<(PathBuf, String)> {
         let root: PathBuf = config.prompts_dir().parse()?;
         let prompt_template_path = Self::pick_file(&root)?;
         let contents = Self::read_template_contents(&prompt_template_path)?;
-        Ok(contents)
+        Ok((prompt_template_path, contents))
     }
 
     fn select_provider_kind(config: &Config) -> anyhow::Result<&LLMProviderKind> {
@@ -98,9 +100,10 @@ impl IndexController {
     fn handle_ask_model(config: Option<Config>) -> anyhow::Result<()> {
         let config = Self::ensure_config(config)?;
         let provider = Self::select_provider_kind(&config)?;
-        let template = Self::select_template(&config)?;
-        let parser = Parser::try_create()?;
-        let prompt_str = parser.compile(template)?;
+        let (prompt_path, contents) = Self::select_template(&config)?;
+        let template_env = Arc::new(TemplateEnv::new(prompt_path));
+        let parser = Parser::try_create(template_env)?;
+        let prompt_str = parser.compile(contents)?;
         let prompt = Prompt::new(prompt_str);
 
         let prompt_text = Self::prepare_prompt(&prompt).as_ref().to_string();
