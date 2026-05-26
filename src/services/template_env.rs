@@ -10,6 +10,7 @@ impl TemplateEnv {
         Self { prompt_path }
     }
 
+    #[allow(unused)]
     pub fn prompt_path(&self) -> &Path {
         self.prompt_path.as_path()
     }
