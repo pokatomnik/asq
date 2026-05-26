@@ -38,7 +38,8 @@ impl CodeExecutor {
         });
 
         if incorrect_token.is_some() {
-            anyhow::bail!("Code has incorret token(s)");
+            let token = incorrect_token.map(|v| v.to_string()).unwrap_or_default();
+            anyhow::bail!("Code has incorret token(s): {token}");
         }
 
         let start = first.to_string().trim_matches('"').to_string();
