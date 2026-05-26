@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::services::code_executor::CodeExecutor;
 use crate::services::pipe_operators::{editor, fetch, file, htm2text, input, lowercase};
 use crate::services::pipe_processor::PipeProcessor;
+use crate::services::template_env::TemplateEnv;
 
 static OPEN_CODE_TOKEN: char = '{';
 static CLOSE_CODE_TOKEN: char = '}';
@@ -25,6 +26,7 @@ impl TryFrom<Part> for String {
 
 pub(crate) struct Parser {
     pipe_processor: Arc<PipeProcessor>,
+    template_env: Arc<TemplateEnv>,
 }
 
 impl Parser {
@@ -41,9 +43,12 @@ impl Parser {
         Ok(pipe_processor)
     }
 
-    pub fn try_create() -> anyhow::Result<Self> {
+    pub fn try_create(template_env: Arc<TemplateEnv>) -> anyhow::Result<Self> {
         let pipe_processor = Self::build_pipe_processor()?;
-        Ok(Self { pipe_processor })
+        Ok(Self {
+            pipe_processor,
+            template_env,
+        })
     }
 
     fn tokenize(&self, source: &str) -> anyhow::Result<Vec<Part>> {
@@ -81,7 +86,8 @@ impl Parser {
                     }
                     (BracersState::Open, _) => {
                         let pipe_processor = self.pipe_processor.clone();
-                        let code_executor = CodeExecutor::new(pipe_processor, buf);
+                        let code_executor =
+                            CodeExecutor::new(pipe_processor, self.template_env.clone(), buf);
                         buf = String::new();
                         result.push(Part::Code(code_executor));
                         bracers_guard.close()?;
@@ -162,11 +168,14 @@ impl BracesGuard {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
 
     #[test]
     fn test_compile_prefix() {
-        let parser = Parser::try_create().unwrap();
+        let template_env = Arc::new(TemplateEnv::new(PathBuf::default()));
+        let parser = Parser::try_create(template_env).unwrap();
         let result = parser
             .compile("{{ \"SMART ASS\" | lower }} said: fuck you")
             .unwrap();
@@ -176,7 +185,8 @@ mod tests {
 
     #[test]
     fn test_compile_suffix() {
-        let parser = Parser::try_create().unwrap();
+        let template_env = Arc::new(TemplateEnv::new(PathBuf::default()));
+        let parser = Parser::try_create(template_env).unwrap();
         let result = parser.compile("hello, {{ WORLD | lower }}").unwrap();
 
         assert_eq!(result, "hello, world")
@@ -184,7 +194,8 @@ mod tests {
 
     #[test]
     fn test_compile_prefix_suffix() {
-        let parser = Parser::try_create().unwrap();
+        let template_env = Arc::new(TemplateEnv::new(PathBuf::default()));
+        let parser = Parser::try_create(template_env).unwrap();
         let result = parser
             .compile("Hi, this is {{ SHIT | lower }} around here")
             .unwrap();
@@ -193,21 +204,24 @@ mod tests {
 
     #[test]
     fn test_incorrect_bracers() {
-        let parser = Parser::try_create().unwrap();
+        let template_env = Arc::new(TemplateEnv::new(PathBuf::default()));
+        let parser = Parser::try_create(template_env).unwrap();
         let result = parser.compile("Hi, this is {{ { SHIT | lower }} around here");
         assert_eq!(result.is_err(), true)
     }
 
     #[test]
     fn test_nested_bracers() {
-        let parser = Parser::try_create().unwrap();
+        let template_env = Arc::new(TemplateEnv::new(PathBuf::default()));
+        let parser = Parser::try_create(template_env).unwrap();
         let result = parser.compile("Hi, this is {{ SHIT | lower {{ WTF }} }} around here");
         assert_eq!(result.is_err(), true)
     }
 
     #[test]
     fn test_no_spaces() {
-        let parser = Parser::try_create().unwrap();
+        let template_env = Arc::new(TemplateEnv::new(PathBuf::default()));
+        let parser = Parser::try_create(template_env).unwrap();
         let result = parser
             .compile("Hi, this is {{SHIT|lower}} around here")
             .unwrap();
