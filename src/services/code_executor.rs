@@ -1,25 +1,19 @@
 use std::sync::Arc;
 
-use crate::services::{pipe_processor::pipe_processor::PipeProcessor, template_env::TemplateEnv};
+use crate::services::pipe_processor::pipe_processor::PipeProcessor;
 
 static SPLIT_TOKEN: char = '|';
 
 pub(crate) struct CodeExecutor {
     pipe_processor: Arc<PipeProcessor>,
-    template_env: Arc<TemplateEnv>,
     source_raw: String,
 }
 
 impl CodeExecutor {
-    pub fn new(
-        pipe_processor: Arc<PipeProcessor>,
-        template_env: Arc<TemplateEnv>,
-        source: impl AsRef<str>,
-    ) -> Self {
+    pub fn new(pipe_processor: Arc<PipeProcessor>, source: impl AsRef<str>) -> Self {
         let source_raw = source.as_ref().to_string();
         Self {
             pipe_processor,
-            template_env,
             source_raw,
         }
     }
@@ -68,7 +62,7 @@ impl CodeExecutor {
             match self.pipe_processor.get_by_name(operator.as_str()) {
                 Ok(maybe_operator) => match maybe_operator {
                     Some(operator) => {
-                        current = operator(current.as_str(), self.template_env.clone())?;
+                        current = operator.handle(current.as_str())?;
                     }
                     None => anyhow::bail!("Wrong operator: {operator}"),
                 },
