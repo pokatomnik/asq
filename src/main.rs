@@ -4,7 +4,6 @@ use crate::cmd::cli;
 use crate::cmd::commands::Commands::{self, Onboard};
 use crate::cmd::providers::ProvidersActions;
 use crate::controllers::controller::Controller;
-use crate::controllers::index::IndexController;
 
 mod cmd;
 mod controllers;
@@ -26,7 +25,7 @@ fn main() -> anyhow::Result<()> {
                 }
             },
         },
-        None => IndexController::new().handle(),
+        None => cli.index.handle(),
     };
 
     result

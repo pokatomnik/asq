@@ -15,13 +15,12 @@ use crate::utils::file_picker::FilePicker;
 use crate::utils::with_spinner::with_spinner;
 
 #[derive(Args, Debug)]
-pub(crate) struct IndexController;
+pub(crate) struct IndexController {
+    #[arg(long, short, default_value_t = false, help = "Select LLM provider")]
+    select_provider: bool,
+}
 
 impl IndexController {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     fn ensure_config(config: Option<Config>) -> anyhow::Result<Config> {
         let config = match config {
             Some(config) => Some(config),
@@ -51,7 +50,12 @@ impl IndexController {
         Ok((prompt_template_path, contents))
     }
 
-    fn select_provider_kind(config: &Config) -> anyhow::Result<&LLMProviderKind> {
+    fn select_provider_kind(&self, config: &Config) -> anyhow::Result<LLMProviderKind> {
+        if let Some(last_used_provider) = config.last_used_provider()
+            && !self.select_provider
+        {
+            return Ok(last_used_provider.clone());
+        }
         let providers: Vec<&LLMProviderKind> = config.providers().into_iter().collect();
         let idx = dialoguer::FuzzySelect::new()
             .report(false)
@@ -64,8 +68,9 @@ impl IndexController {
         let provider = &providers
             .get(idx)
             .ok_or_else(|| anyhow::Error::msg("Failed to select LLM provider"))?;
+        let provider = (***provider).clone();
 
-        Ok(provider)
+        Ok(provider.to_owned())
     }
 
     fn prepare_raw_prompt(prompt: &str, raw: &str) -> String {
@@ -97,9 +102,9 @@ impl IndexController {
         }
     }
 
-    fn handle_ask_model(config: Option<Config>) -> anyhow::Result<()> {
-        let config = Self::ensure_config(config)?;
-        let provider = Self::select_provider_kind(&config)?;
+    fn handle_ask_model(&self, config: Option<Config>) -> anyhow::Result<()> {
+        let mut config = Self::ensure_config(config)?;
+        let provider = self.select_provider_kind(&config)?;
         let (prompt_path, contents) = Self::select_template(&config)?;
         let template_env = Arc::new(TemplateEnv::new(prompt_path));
         let parser = Parser::try_create(template_env)?;
@@ -108,25 +113,27 @@ impl IndexController {
 
         let prompt_text = Self::prepare_prompt(&prompt).as_ref().to_string();
 
-        let response =
-            with_spinner(
-                format!("{} answer:", provider.to_string()),
-                move || match provider {
-                    LLMProviderKind::Ollama(ollama_provider) => ollama_provider.ask(prompt_text),
-                    LLMProviderKind::Openrouter(openrouter_provider) => {
-                        openrouter_provider.ask(prompt_text)
-                    }
-                    LLMProviderKind::DuckDuckGo(duckduckgo_provider) => {
-                        duckduckgo_provider.ask(prompt_text)
-                    }
-                    LLMProviderKind::Deepseek(deepseek_provider) => {
-                        deepseek_provider.ask(prompt_text)
-                    }
-                    LLMProviderKind::OpenAILike(openai_like_provider) => {
-                        openai_like_provider.ask(prompt_text)
-                    }
-                },
-            )?;
+        let response = with_spinner(
+            format!("{} answer:", &provider.to_string()),
+            || match provider {
+                LLMProviderKind::Ollama(ref ollama_provider) => ollama_provider.ask(prompt_text),
+                LLMProviderKind::Openrouter(ref openrouter_provider) => {
+                    openrouter_provider.ask(prompt_text)
+                }
+                LLMProviderKind::DuckDuckGo(ref duckduckgo_provider) => {
+                    duckduckgo_provider.ask(prompt_text)
+                }
+                LLMProviderKind::Deepseek(ref deepseek_provider) => {
+                    deepseek_provider.ask(prompt_text)
+                }
+                LLMProviderKind::OpenAILike(ref openai_like_provider) => {
+                    openai_like_provider.ask(prompt_text)
+                }
+            },
+        )?;
+
+        config.set_last_used_provider(Some(provider));
+        config.try_write()?;
 
         Self::handle_prompt_response(&prompt, &response);
 
@@ -138,10 +145,10 @@ impl Controller for IndexController {
     fn handle(&self) -> anyhow::Result<()> {
         let config = Config::try_read();
         match config {
-            Ok(config) => Self::handle_ask_model(Some(config)),
+            Ok(config) => self.handle_ask_model(Some(config)),
             Err(_) => {
                 OnboardController::new().handle()?;
-                Self::handle_ask_model(None)
+                self.handle_ask_model(None)
             }
         }
     }

@@ -15,6 +15,9 @@ static CONFIG_FILE_NAME: &'static str = "asq.json";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct Config {
+    #[serde(rename = "lasUsedProvider")]
+    last_used_provider: Option<LLMProviderKind>,
+
     #[serde(rename = "providers")]
     providers: Vec<LLMProviderKind>,
 
@@ -44,6 +47,14 @@ impl Config {
     /// Get all providers list
     pub fn providers(&self) -> impl Iterator<Item = &LLMProviderKind> {
         self.providers.iter()
+    }
+
+    pub fn last_used_provider(&self) -> Option<&LLMProviderKind> {
+        self.last_used_provider.as_ref()
+    }
+
+    pub fn set_last_used_provider(&mut self, last_used_provider: Option<LLMProviderKind>) {
+        self.last_used_provider = last_used_provider;
     }
 
     fn ask_prompt_paths() -> anyhow::Result<PathBuf> {
@@ -155,6 +166,7 @@ impl InitInteractive<Config> for Config {
         let providers = Self::ask_providers()?;
 
         let result = Self {
+            last_used_provider: None,
             prompts_dir: prompts_path.to_string_lossy().to_string(),
             providers,
         };
