@@ -2,7 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use dom_smoothie::{Config, Readability, TextMode};
 
-use crate::services::template_env::TemplateEnv;
+use crate::services::{parser::Parser, template_env::TemplateEnv};
 
 /// Returns a lowercase copy of the provided string slice.
 ///
@@ -50,40 +50,57 @@ pub(crate) fn fetch(url: &str, _: Arc<TemplateEnv>) -> anyhow::Result<String> {
     Ok(text)
 }
 
-/// Reads the contents of a file as a string.
+/// Reads a file from disk, optionally compiling markdown templates relative to the prompt directory.
 ///
 /// # Arguments
 ///
-/// * `path` - The file path to read. If relative, it is resolved against the template's prompt directory.
-/// * `template_env` - The template environment used to resolve relative paths.
+/// * `path` - The file path to read. Absolute paths are read directly; relative paths are
+///   resolved against the current prompt directory.
+/// * `template_env` - The template environment used to resolve relative paths and create a
+///   nested environment when compiling markdown templates.
 ///
 /// # Returns
 ///
-/// A `String` containing the file contents.
+/// A `String` containing the file contents. If the file has a `.md` extension and is read via a
+/// relative path, the contents are compiled as a template before being returned.
 ///
 /// # Examples
 ///
 /// ```
-/// let result = file("example.txt", template_env).unwrap();
+/// let result = file("notes.txt", template_env).unwrap();
 /// assert!(!result.is_empty());
 /// ```
 pub(crate) fn file(path: &str, template_env: Arc<TemplateEnv>) -> anyhow::Result<String> {
     let path = PathBuf::from(path);
-    match path.is_absolute() {
-        true => {
-            let result = std::fs::read_to_string(path)?;
-            Ok(result)
-        }
-        false => {
-            let prompt_dir = template_env
-                .prompt_dir()
-                .ok_or_else(|| anyhow::Error::msg("No prompt dir"))?
-                .to_path_buf();
-            let required_path = prompt_dir.join(path);
-            let result = std::fs::read_to_string(required_path)?;
-            Ok(result)
-        }
+
+    if path.is_absolute() {
+        let result = std::fs::read_to_string(path)?;
+        return Ok(result);
     }
+
+    let prompt_dir = template_env
+        .prompt_dir()
+        .ok_or_else(|| anyhow::Error::msg("No prompt dir"))?
+        .to_path_buf();
+    let required_path = prompt_dir.join(path);
+    let template_contents = std::fs::read_to_string(required_path.as_path())?;
+
+    let ends_with_md = required_path
+        .extension()
+        .map(PathBuf::from)
+        .map(|v| v.to_string_lossy().to_string())
+        .map(|v| v == "md")
+        .unwrap_or_default();
+
+    if !ends_with_md {
+        return Ok(template_contents);
+    }
+
+    let template_env = Arc::new(TemplateEnv::new(required_path));
+    let parser = Parser::try_create(template_env)?;
+    let prompt_str = parser.compile(template_contents)?;
+
+    Ok(prompt_str)
 }
 
 /// Prompts the user for input with the provided message.
