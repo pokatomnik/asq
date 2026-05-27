@@ -2,7 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use dom_smoothie::{Config, Readability, TextMode};
 
-use crate::services::template_env::TemplateEnv;
+use crate::services::{parser::Parser, template_env::TemplateEnv};
 
 /// Returns a lowercase copy of the provided string slice.
 ///
@@ -69,21 +69,24 @@ pub(crate) fn fetch(url: &str, _: Arc<TemplateEnv>) -> anyhow::Result<String> {
 /// ```
 pub(crate) fn file(path: &str, template_env: Arc<TemplateEnv>) -> anyhow::Result<String> {
     let path = PathBuf::from(path);
-    match path.is_absolute() {
-        true => {
-            let result = std::fs::read_to_string(path)?;
-            Ok(result)
-        }
-        false => {
-            let prompt_dir = template_env
-                .prompt_dir()
-                .ok_or_else(|| anyhow::Error::msg("No prompt dir"))?
-                .to_path_buf();
-            let required_path = prompt_dir.join(path);
-            let result = std::fs::read_to_string(required_path)?;
-            Ok(result)
-        }
+
+    if path.is_absolute() {
+        let result = std::fs::read_to_string(path)?;
+        return Ok(result);
     }
+
+    let prompt_dir = template_env
+        .prompt_dir()
+        .ok_or_else(|| anyhow::Error::msg("No prompt dir"))?
+        .to_path_buf();
+    let required_path = prompt_dir.join(path);
+    let template_contents = std::fs::read_to_string(required_path.as_path())?;
+
+    let template_env = Arc::new(TemplateEnv::new(required_path));
+    let parser = Parser::try_create(template_env)?;
+    let prompt_str = parser.compile(template_contents)?;
+
+    Ok(prompt_str)
 }
 
 /// Prompts the user for input with the provided message.
