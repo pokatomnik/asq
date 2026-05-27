@@ -1,4 +1,4 @@
-use crate::cmd::commands::Commands;
+use crate::{cmd::commands::Commands, controllers::index::IndexController};
 use clap::Parser;
 
 #[derive(Parser)]
@@ -8,4 +8,7 @@ use clap::Parser;
 pub(crate) struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
+
+    #[command(flatten)]
+    pub index: IndexController,
 }
