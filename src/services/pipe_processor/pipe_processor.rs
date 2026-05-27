@@ -2,34 +2,29 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use crate::services::template_env::TemplateEnv;
-
-pub(crate) type PipeOperator = Arc<dyn Fn(&str, Arc<TemplateEnv>) -> anyhow::Result<String>>;
+use crate::services::pipe_processor::pipe_operator::PipeOperator;
 
 #[derive(Default)]
 pub(crate) struct PipeProcessor {
-    operators: Arc<RwLock<HashMap<String, PipeOperator>>>,
+    operators: Arc<RwLock<HashMap<String, Arc<dyn PipeOperator>>>>,
 }
 
 impl PipeProcessor {
     pub fn register_operator(
         &self,
         name: impl Into<String>,
-        operator: impl Fn(&str, Arc<TemplateEnv>) -> anyhow::Result<String> + 'static,
+        operator: Arc<dyn PipeOperator>,
     ) -> anyhow::Result<()> {
         let Ok(mut operators) = self.operators.write() else {
             anyhow::bail!("Cannot lock");
         };
 
-        operators.insert(name.into(), Arc::new(operator));
+        operators.insert(name.into(), operator);
 
         Ok(())
     }
 
-    pub fn get_by_name(
-        &self,
-        name: &str,
-    ) -> anyhow::Result<Option<Arc<dyn Fn(&str, Arc<TemplateEnv>) -> anyhow::Result<String>>>> {
+    pub fn get_by_name(&self, name: &str) -> anyhow::Result<Option<Arc<dyn PipeOperator>>> {
         let Ok(operators) = self.operators.read() else {
             anyhow::bail!("Cannot lock");
         };

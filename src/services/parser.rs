@@ -1,8 +1,16 @@
 use std::sync::Arc;
 
+use dom_smoothie::{Config, TextMode};
+use reqwest::blocking::Client;
+
 use crate::services::code_executor::CodeExecutor;
-use crate::services::pipe_operators::{editor, fetch, file, htm2text, input, lowercase};
-use crate::services::pipe_processor::PipeProcessor;
+use crate::services::pipe_processor::operators::editor::Editor;
+use crate::services::pipe_processor::operators::fetch::Fetch;
+use crate::services::pipe_processor::operators::file::File;
+use crate::services::pipe_processor::operators::htm2text::HTM2Text;
+use crate::services::pipe_processor::operators::input::Input;
+use crate::services::pipe_processor::operators::lowercase::Lowercase;
+use crate::services::pipe_processor::pipe_processor::PipeProcessor;
 use crate::services::template_env::TemplateEnv;
 
 static OPEN_CODE_TOKEN: char = '{';
@@ -26,14 +34,23 @@ impl TryFrom<Part> for String {
 
 pub(crate) struct Parser {
     pipe_processor: Arc<PipeProcessor>,
-    template_env: Arc<TemplateEnv>,
 }
 
 impl Parser {
-    fn build_pipe_processor() -> anyhow::Result<Arc<PipeProcessor>> {
+    fn build_pipe_processor(template_env: Arc<TemplateEnv>) -> anyhow::Result<Arc<PipeProcessor>> {
         let pipe_processor = Arc::new(PipeProcessor::default());
 
-        pipe_processor.register_operator("lower", lowercase)?;
+        let lower = Arc::new(Lowercase::new());
+        let fetch = Arc::new(Fetch::new(Some(Arc::new(Client::new()))));
+        let file = Arc::new(File::new(template_env.clone()));
+        let input = Arc::new(Input::new());
+        let editor = Arc::new(Editor::new());
+        let htm2text = Arc::new(HTM2Text::new(Some(Arc::new(Config {
+            text_mode: TextMode::Markdown,
+            ..Default::default()
+        }))));
+
+        pipe_processor.register_operator("lower", lower)?;
         pipe_processor.register_operator("fetch", fetch)?;
         pipe_processor.register_operator("file", file)?;
         pipe_processor.register_operator("input", input)?;
@@ -44,11 +61,8 @@ impl Parser {
     }
 
     pub fn try_create(template_env: Arc<TemplateEnv>) -> anyhow::Result<Self> {
-        let pipe_processor = Self::build_pipe_processor()?;
-        Ok(Self {
-            pipe_processor,
-            template_env,
-        })
+        let pipe_processor = Self::build_pipe_processor(template_env.clone())?;
+        Ok(Self { pipe_processor })
     }
 
     fn tokenize(&self, source: &str) -> anyhow::Result<Vec<Part>> {
@@ -86,8 +100,7 @@ impl Parser {
                     }
                     (BracersState::Open, _) => {
                         let pipe_processor = self.pipe_processor.clone();
-                        let code_executor =
-                            CodeExecutor::new(pipe_processor, self.template_env.clone(), buf);
+                        let code_executor = CodeExecutor::new(pipe_processor, buf);
                         buf = String::new();
                         result.push(Part::Code(code_executor));
                         bracers_guard.close()?;
