@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
 use crate::services::code_executor::CodeExecutor;
-use crate::services::pipe_operators::{editor, fetch, file, htm2text, input, lowercase};
-use crate::services::pipe_processor::PipeProcessor;
+use crate::services::pipe_processor::pipe_operators::{
+    editor, fetch, file, htm2text, input, lowercase,
+};
+use crate::services::pipe_processor::pipe_processor::PipeProcessor;
 use crate::services::template_env::TemplateEnv;
 
 static OPEN_CODE_TOKEN: char = '{';

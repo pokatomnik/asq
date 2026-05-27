@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::services::{pipe_processor::PipeProcessor, template_env::TemplateEnv};
+use crate::services::{pipe_processor::pipe_processor::PipeProcessor, template_env::TemplateEnv};
 
 static SPLIT_TOKEN: char = '|';
 
