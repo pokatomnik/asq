@@ -6,9 +6,12 @@ use clap::Args;
 use crate::controllers::controller::Controller;
 use crate::controllers::onboard::OnboardController;
 use crate::entities::llm_provider_kind::LLMProviderKind;
+use crate::entities::message::Message;
 use crate::entities::prompt::{FrondmatterKind, Prompt};
-use crate::providers::llm_provider::{LLMAnswer, LLMProvider};
+use crate::entities::role::Role;
+use crate::providers::llm_provider::LLMProvider;
 use crate::services::config::Config;
+use crate::services::history::History;
 use crate::services::parser::Parser;
 use crate::services::template_env::TemplateEnv;
 use crate::utils::file_picker::FilePicker;
@@ -18,6 +21,14 @@ use crate::utils::with_spinner::with_spinner;
 pub(crate) struct IndexController {
     #[arg(long, short, default_value_t = false, help = "Select LLM provider")]
     select_provider: bool,
+
+    #[arg(
+        long = "continue",
+        short = 'c',
+        default_value_t = false,
+        help = "Continue previous dialog"
+    )]
+    r#continue: bool,
 }
 
 impl IndexController {
@@ -92,50 +103,63 @@ impl IndexController {
         println!("{}", output);
     }
 
-    fn handle_prompt_response(prompt: &Prompt, response: &LLMAnswer) {
-        match (prompt.frontmatter(), response) {
-            (None, LLMAnswer::External) | (Some(_), LLMAnswer::External) => {}
-            (None, LLMAnswer::Text(response)) => Self::print_markdown(response),
-            (Some(frontmatter), LLMAnswer::Text(response)) => match frontmatter {
-                FrondmatterKind::Raw(_) => Self::print_markdown(response),
-            },
-        }
+    fn ask_text(prompt: &str) -> anyhow::Result<String> {
+        let result = dialoguer::Input::new()
+            .report(false)
+            .with_prompt(prompt)
+            .interact()?;
+        Ok(result)
     }
 
     fn handle_ask_model(&self, config: Option<Config>) -> anyhow::Result<()> {
         let mut config = Self::ensure_config(config)?;
+        let history = History::new(self.r#continue);
+
         let provider = self.select_provider_kind(&config)?;
-        let (prompt_path, contents) = Self::select_template(&config)?;
-        let template_env = Arc::new(TemplateEnv::new(prompt_path));
-        let parser = Parser::try_create(template_env)?;
-        let prompt_str = parser.compile(contents)?;
-        let prompt = Prompt::new(prompt_str);
 
-        let prompt_text = Self::prepare_prompt(&prompt).as_ref().to_string();
+        let prompt_text = match !history.is_empty() && self.r#continue {
+            true => Self::ask_text("Your question")?,
+            false => {
+                let (prompt_path, contents) = Self::select_template(&config)?;
+                let template_env = Arc::new(TemplateEnv::new(&prompt_path));
+                let parser = Parser::try_create(template_env)?;
+                let prompt_str = parser.compile(&contents)?;
+                let prompt = Prompt::new(prompt_str);
+                Self::prepare_prompt(&prompt).as_ref().to_string()
+            }
+        };
 
-        let response = with_spinner(
-            format!("{} answer:", &provider.to_string()),
-            || match provider {
-                LLMProviderKind::Ollama(ref ollama_provider) => ollama_provider.ask(prompt_text),
-                LLMProviderKind::Openrouter(ref openrouter_provider) => {
-                    openrouter_provider.ask(prompt_text)
-                }
-                LLMProviderKind::DuckDuckGo(ref duckduckgo_provider) => {
-                    duckduckgo_provider.ask(prompt_text)
-                }
-                LLMProviderKind::Deepseek(ref deepseek_provider) => {
-                    deepseek_provider.ask(prompt_text)
-                }
-                LLMProviderKind::OpenAILike(ref openai_like_provider) => {
-                    openai_like_provider.ask(prompt_text)
-                }
-            },
-        )?;
+        history.with_history(|messages| {
+            let answer =
+                with_spinner(
+                    format!("{} answer:", &provider.to_string()),
+                    || match provider {
+                        LLMProviderKind::Ollama(ref ollama_provider) => {
+                            ollama_provider.ask(&prompt_text, messages.clone())
+                        }
+                        LLMProviderKind::Openrouter(ref openrouter_provider) => {
+                            openrouter_provider.ask(&prompt_text, messages.clone())
+                        }
+                        LLMProviderKind::Deepseek(ref deepseek_provider) => {
+                            deepseek_provider.ask(&prompt_text, messages.clone())
+                        }
+                        LLMProviderKind::OpenAILike(ref openai_like_provider) => {
+                            openai_like_provider.ask(&prompt_text, messages.clone())
+                        }
+                    },
+                )?;
 
-        config.set_last_used_provider(Some(provider));
-        config.try_write()?;
+            let mut messages = messages;
+            messages.push(Message::new(Role::User, &prompt_text));
+            messages.push(Message::new(Role::Assistant, answer.response()));
 
-        Self::handle_prompt_response(&prompt, &response);
+            config.set_last_used_provider(Some(provider));
+            config.try_write()?;
+
+            Self::print_markdown(&answer.response());
+
+            Ok(messages)
+        })?;
 
         Ok(())
     }

@@ -5,9 +5,13 @@ use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 
 use crate::entities::consts::DEFAULT_TIMEOUT;
+use crate::entities::message::Message;
 use crate::entities::proxy::LLMProxy;
-use crate::entities::system_prompt::SYSTEM_PROMPT;
-use crate::providers::llm_provider::{LLMAnswer, LLMProvider, ModelsResponse};
+use crate::entities::role::Role;
+use crate::providers::llm_provider::{
+    LLMAnswer, LLMProvider, LLMProviderMessage, LLMProviderMessageRole, LLMProviderRequestBody,
+    ModelsResponse,
+};
 use crate::utils::client_builder_ext::ClientBuilderExt;
 use crate::utils::describe::Describe;
 use crate::utils::init_interactive::InitInteractive;
@@ -116,21 +120,33 @@ impl InitInteractive<OpenrouterProvider> for OpenrouterProvider {
 }
 
 impl LLMProvider for OpenrouterProvider {
-    fn ask(&self, prompt: impl AsRef<str>) -> anyhow::Result<LLMAnswer> {
+    fn ask(
+        &self,
+        prompt: impl AsRef<str>,
+        history: impl IntoIterator<Item = Message>,
+    ) -> anyhow::Result<LLMAnswer> {
         let model = self.model();
         let prompt = prompt.as_ref();
 
-        let body = serde_json::json!({
-            "model": model,
-            "messages": [{
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            }, {
-                "role": "user",
-                "content": prompt
-            }],
-            "stream": false,
-        });
+        let mut messages = history
+            .into_iter()
+            .map(|m| {
+                let role = match m.role() {
+                    Role::System => LLMProviderMessageRole::System,
+                    Role::User => LLMProviderMessageRole::User,
+                    Role::Assistant => LLMProviderMessageRole::Assistant,
+                };
+                LLMProviderMessage::new(role, m.contents())
+            })
+            .collect::<Vec<LLMProviderMessage>>();
+
+        messages.push(LLMProviderMessage::new(
+            LLMProviderMessageRole::User,
+            prompt,
+        ));
+
+        let body = LLMProviderRequestBody::new(model, messages, false);
+
         let body_json_str = serde_json::to_string(&body)?;
 
         let client = reqwest::blocking::ClientBuilder::new()
@@ -174,8 +190,8 @@ impl LLMProvider for OpenrouterProvider {
             );
         }
 
-        Ok(LLMAnswer::Text(
-            llm_response_message.message.content.to_owned(),
+        Ok(LLMAnswer::new(
+            llm_response_message.message.content.as_str(),
         ))
     }
 
