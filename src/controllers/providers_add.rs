@@ -3,7 +3,6 @@ use clap::Args;
 use crate::controllers::controller::Controller;
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
 use crate::providers::deepseek::DeepseekProvider;
-use crate::providers::duckduckgo::DuckDuckGoProvider;
 use crate::providers::ollama::OllamaProvider;
 use crate::providers::openai_like::OpenAILikeProvider;
 use crate::providers::openrouter::OpenrouterProvider;
@@ -20,7 +19,6 @@ impl ProvidersAddController {
             LLMProviderKindOnly::Openrouter,
             LLMProviderKindOnly::Deepseek,
             LLMProviderKindOnly::OpenAILike,
-            LLMProviderKindOnly::DuckDuckGo,
         ];
         let kind_idx = dialoguer::FuzzySelect::new()
             .report(false)
@@ -45,9 +43,6 @@ impl Controller for ProvidersAddController {
             }
             LLMProviderKindOnly::Openrouter => {
                 LLMProviderKind::Openrouter(OpenrouterProvider::init_interactive()?)
-            }
-            LLMProviderKindOnly::DuckDuckGo => {
-                LLMProviderKind::DuckDuckGo(DuckDuckGoProvider::init_interactive()?)
             }
             LLMProviderKindOnly::Deepseek => {
                 LLMProviderKind::Deepseek(DeepseekProvider::init_interactive()?)

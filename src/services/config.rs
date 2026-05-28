@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
 use crate::providers::deepseek::DeepseekProvider;
-use crate::providers::duckduckgo::DuckDuckGoProvider;
 use crate::providers::ollama::OllamaProvider;
 use crate::providers::openai_like::OpenAILikeProvider;
 use crate::providers::openrouter::OpenrouterProvider;
@@ -122,9 +121,6 @@ impl Config {
             LLMProviderKindOnly::Openrouter => Ok(LLMProviderKind::Openrouter(
                 OpenrouterProvider::init_interactive()?,
             )),
-            LLMProviderKindOnly::DuckDuckGo => Ok(LLMProviderKind::DuckDuckGo(
-                DuckDuckGoProvider::init_interactive()?,
-            )),
             LLMProviderKindOnly::Deepseek => Ok(LLMProviderKind::Deepseek(
                 DeepseekProvider::init_interactive()?,
             )),
@@ -140,7 +136,6 @@ impl Config {
             LLMProviderKindOnly::Openrouter,
             LLMProviderKindOnly::Deepseek,
             LLMProviderKindOnly::OpenAILike,
-            LLMProviderKindOnly::DuckDuckGo,
         ];
         let kind_idx = dialoguer::FuzzySelect::new()
             .report(false)

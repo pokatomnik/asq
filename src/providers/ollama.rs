@@ -1,12 +1,17 @@
 use std::cell::OnceCell;
+use std::fmt::Display;
 
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 
 use crate::entities::consts::DEFAULT_TIMEOUT;
+use crate::entities::message::Message;
 use crate::entities::proxy::LLMProxy;
-use crate::entities::system_prompt::SYSTEM_PROMPT;
-use crate::providers::llm_provider::{LLMAnswer, LLMProvider, ModelsResponse};
+use crate::entities::role::Role;
+use crate::providers::llm_provider::{
+    LLMAnswer, LLMProvider, LLMProviderMessage, LLMProviderMessageRole, LLMProviderRequestBody,
+    ModelsResponse,
+};
 use crate::utils::client_builder_ext::ClientBuilderExt;
 use crate::utils::describe::Describe;
 use crate::utils::init_interactive::InitInteractive;
@@ -131,7 +136,7 @@ impl InitInteractive<OllamaProvider> for OllamaProvider {
         let token = token_key.as_ref().and_then(|tk| std::env::var(tk).ok());
 
         let proxy_scheme = Option::<LLMProxy>::init_interactive()?;
-        let ask_model_url = format!("{}/api/tags", endpoint_url);
+        let ask_model_url = format!("{}/v1/models", endpoint_url);
         let model = Self::ask_model(ask_model_url, token.as_deref(), proxy_scheme.clone())?;
         Ok(Self {
             name,
@@ -145,18 +150,33 @@ impl InitInteractive<OllamaProvider> for OllamaProvider {
 }
 
 impl LLMProvider for OllamaProvider {
-    fn ask(&self, prompt: impl AsRef<str>) -> anyhow::Result<LLMAnswer> {
+    fn ask(
+        &self,
+        prompt: impl AsRef<str>,
+        history: impl IntoIterator<Item = Message>,
+    ) -> anyhow::Result<LLMAnswer> {
         let model = self.model();
         let prompt = prompt.as_ref();
 
-        let body = serde_json::json!({
-            "model": model,
-            "prompt": prompt,
-            "stream": false,
-            "system": SYSTEM_PROMPT,
-            // TODO add options here
-            // "options": {}
-        });
+        let mut messages = history
+            .into_iter()
+            .map(|m| {
+                let role = match m.role() {
+                    Role::System => LLMProviderMessageRole::System,
+                    Role::User => LLMProviderMessageRole::User,
+                    Role::Assistant => LLMProviderMessageRole::Assistant,
+                };
+                LLMProviderMessage::new(role, m.contents())
+            })
+            .collect::<Vec<LLMProviderMessage>>();
+
+        messages.push(LLMProviderMessage::new(
+            LLMProviderMessageRole::User,
+            prompt,
+        ));
+
+        let body = LLMProviderRequestBody::new(model, messages, false);
+
         let body_json_str = serde_json::to_string(&body)?;
 
         let client = reqwest::blocking::ClientBuilder::new()
@@ -164,7 +184,10 @@ impl LLMProvider for OllamaProvider {
             .with_optional_proxy(self.proxy().as_ref())
             .build()?;
 
-        let url = format!("{}/api/generate", self.enpoint_url().trim_matches('/'));
+        let url = format!(
+            "{}/v1/chat/completions",
+            self.enpoint_url().trim_matches('/')
+        );
 
         let token = self.auth_token();
         let request_builder = client
@@ -182,8 +205,12 @@ impl LLMProvider for OllamaProvider {
         }
 
         let result: OllamaGenerateResponse = response.text()?.try_into()?;
+        let response = result
+            .choices
+            .get(0)
+            .ok_or_else(|| anyhow::Error::msg("No response from LLM"))?;
 
-        Ok(LLMAnswer::Text(result.response))
+        Ok(LLMAnswer::new(response.message.content.as_str()))
     }
 
     fn list_models(
@@ -206,9 +233,9 @@ impl LLMProvider for OllamaProvider {
 
         let parsed_result = serde_json::from_str::<OllamaModelsResponse>(result_json.as_str())?;
         let model_names = parsed_result
-            .models
+            .data
             .iter()
-            .map(|v| v.model.to_owned())
+            .map(|v| v.id.to_owned())
             .collect::<Vec<String>>();
 
         Ok(ModelsResponse::Models(model_names))
@@ -243,7 +270,88 @@ impl Describe for OllamaProvider {
 
 #[derive(serde::Deserialize)]
 struct OllamaGenerateResponse {
-    response: String,
+    #[serde(rename = "model")]
+    #[allow(unused)]
+    model: String,
+
+    #[serde(rename = "choices")]
+    choices: Vec<OllamaGenerateResponseChoice>,
+}
+
+#[derive(serde::Deserialize)]
+struct OllamaGenerateResponseChoice {
+    #[serde(rename = "index")]
+    #[allow(unused)]
+    index: usize,
+
+    #[serde(rename = "finish_reason")]
+    #[allow(unused)]
+    finish_reason: OllamaGenerateResponseFinishReason,
+
+    #[serde(rename = "message")]
+    message: OllamaGenerateResponseMessage,
+}
+
+#[derive(serde::Deserialize)]
+struct OllamaGenerateResponseMessage {
+    #[serde(rename = "role")]
+    #[allow(unused)]
+    role: OllamaGenerateResponseRole,
+
+    #[serde(rename = "content")]
+    content: String,
+}
+
+#[derive(serde::Deserialize, Clone, Debug, Copy, PartialEq, Eq)]
+enum OllamaGenerateResponseRole {
+    #[serde(rename = "system")]
+    System,
+
+    #[serde(rename = "assistant")]
+    Assistant,
+
+    #[serde(rename = "user")]
+    User,
+}
+
+impl Display for OllamaGenerateResponseRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OllamaGenerateResponseRole::System => f.write_str("system"),
+            OllamaGenerateResponseRole::Assistant => f.write_str("assistant"),
+            OllamaGenerateResponseRole::User => f.write_str("user"),
+        }
+    }
+}
+
+#[derive(serde::Deserialize, Clone, Copy, PartialEq, PartialOrd)]
+enum OllamaGenerateResponseFinishReason {
+    #[serde(rename = "stop")]
+    Stop,
+
+    #[serde(rename = "length")]
+    Length,
+
+    #[serde(rename = "tool_calls")]
+    ToolCalls,
+
+    #[serde(rename = "content_filter")]
+    ContentFilter,
+
+    #[serde(rename = "error")]
+    Error,
+}
+
+impl Display for OllamaGenerateResponseFinishReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OllamaGenerateResponseFinishReason::Stop => f.write_str("stop"),
+            OllamaGenerateResponseFinishReason::Length => f.write_str("length"),
+            OllamaGenerateResponseFinishReason::ToolCalls => f.write_str("tool_calls"),
+            OllamaGenerateResponseFinishReason::ContentFilter => f.write_str("content_filter"),
+            OllamaGenerateResponseFinishReason::Error => f.write_str("error"),
+        }
+    }
 }
 
 impl TryFrom<String> for OllamaGenerateResponse {
@@ -257,11 +365,10 @@ impl TryFrom<String> for OllamaGenerateResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct OllamaModelsResponse {
-    pub models: Vec<OllamaModel>,
+    data: Vec<ModelDescription>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct OllamaModel {
-    pub name: String,
-    pub model: String,
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct ModelDescription {
+    id: String,
 }

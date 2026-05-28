@@ -14,6 +14,7 @@
     "sourceLanguages": ["rust"],
     "request": "launch",
     "adapter": "CodeLLDB",
+    "args": ["--continue"],
   },
   {
     "label": "asq:debug_add",
