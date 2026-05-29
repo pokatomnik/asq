@@ -10,8 +10,12 @@ use crate::services::pipe_processor::operators::file::File;
 use crate::services::pipe_processor::operators::htm2text::HTM2Text;
 use crate::services::pipe_processor::operators::input::Input;
 use crate::services::pipe_processor::operators::lowercase::Lowercase;
+use crate::services::pipe_processor::operators::multiselect::Multiselect;
+use crate::services::pipe_processor::operators::password::Password;
+use crate::services::pipe_processor::operators::select::Select;
 use crate::services::pipe_processor::pipe_processor::PipeProcessor;
 use crate::services::template_env::TemplateEnv;
+use crate::utils::describe::Describe;
 
 static OPEN_CODE_TOKEN: char = '{';
 static CLOSE_CODE_TOKEN: char = '}';
@@ -49,6 +53,9 @@ impl Parser {
             text_mode: TextMode::Markdown,
             ..Default::default()
         }))));
+        let select = Arc::new(Select::new());
+        let multiselect = Arc::new(Multiselect::new());
+        let password = Arc::new(Password::new());
 
         pipe_processor.register_operator("lower", lower)?;
         pipe_processor.register_operator("fetch", fetch)?;
@@ -56,6 +63,9 @@ impl Parser {
         pipe_processor.register_operator("input", input)?;
         pipe_processor.register_operator("editor", editor)?;
         pipe_processor.register_operator("htm2text", htm2text)?;
+        pipe_processor.register_operator("select", select)?;
+        pipe_processor.register_operator("multiselect", multiselect)?;
+        pipe_processor.register_operator("password", password)?;
 
         Ok(pipe_processor)
     }
@@ -176,6 +186,12 @@ impl BracesGuard {
 
         self.open -= 1;
         Ok(())
+    }
+}
+
+impl Describe for Parser {
+    fn describe(&self) -> String {
+        self.pipe_processor.describe()
     }
 }
 

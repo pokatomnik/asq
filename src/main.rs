@@ -24,6 +24,11 @@ fn main() -> anyhow::Result<()> {
                     models_delete_controller.handle()
                 }
             },
+            Commands::Operators(operators_actions) => match operators_actions {
+                cmd::operators::OperatorsActions::List(operators_list_controller) => {
+                    operators_list_controller.handle()
+                }
+            },
         },
         None => cli.index.handle(),
     };

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 use crate::services::pipe_processor::pipe_operator::PipeOperator;
+use crate::utils::describe::Describe;
 
 #[derive(Default)]
 pub(crate) struct PipeProcessor {
@@ -30,5 +31,21 @@ impl PipeProcessor {
         };
 
         Ok(operators.get(name).map(|v| v.clone()))
+    }
+}
+
+impl Describe for PipeProcessor {
+    fn describe(&self) -> String {
+        let Ok(operators) = self.operators.read() else {
+            return String::default();
+        };
+
+        let mut buf = Vec::with_capacity(operators.len());
+        for (name, _) in operators.iter() {
+            buf.push(name.to_string());
+        }
+        buf.sort();
+
+        format!("Supported operators: {}", buf.join(", "))
     }
 }
