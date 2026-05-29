@@ -4,3 +4,6 @@ pub(crate) mod file;
 pub(crate) mod htm2text;
 pub(crate) mod input;
 pub(crate) mod lowercase;
+pub(crate) mod multiselect;
+pub(crate) mod password;
+pub(crate) mod select;

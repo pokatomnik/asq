@@ -1,6 +1,9 @@
 use clap::Subcommand;
 
-use crate::{cmd::providers::ProvidersActions, controllers::onboard::OnboardController};
+use crate::{
+    cmd::{operators::OperatorsActions, providers::ProvidersActions},
+    controllers::onboard::OnboardController,
+};
 
 #[derive(Subcommand)]
 pub(crate) enum Commands {
@@ -8,4 +11,7 @@ pub(crate) enum Commands {
 
     #[command(subcommand)]
     Providers(ProvidersActions),
+
+    #[command(subcommand)]
+    Operators(OperatorsActions),
 }
