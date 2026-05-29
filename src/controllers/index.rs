@@ -1,7 +1,8 @@
+use std::fmt::Display;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use clap::Args;
+use clap::{Args, ValueEnum};
 
 use crate::controllers::controller::Controller;
 use crate::controllers::onboard::OnboardController;
@@ -17,6 +18,22 @@ use crate::services::template_env::TemplateEnv;
 use crate::utils::file_picker::FilePicker;
 use crate::utils::with_spinner::with_spinner;
 
+#[derive(Clone, Copy, Debug, ValueEnum)]
+#[clap(rename_all = "kebab-case")]
+enum OutputMode {
+    Markdown,
+    Plain,
+}
+
+impl Display for OutputMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OutputMode::Markdown => f.write_str("markdown"),
+            OutputMode::Plain => f.write_str("plain"),
+        }
+    }
+}
+
 #[derive(Args, Debug)]
 pub(crate) struct IndexController {
     #[arg(long, short, default_value_t = false, help = "Select LLM provider")]
@@ -29,6 +46,9 @@ pub(crate) struct IndexController {
         help = "Continue previous dialog"
     )]
     r#continue: bool,
+
+    #[arg(long = "output", short = 'o', default_value_t = OutputMode::Markdown, help = "Terminal output type")]
+    output: OutputMode,
 }
 
 impl IndexController {
@@ -103,6 +123,10 @@ impl IndexController {
         println!("{}", output);
     }
 
+    fn print_plain(response: impl AsRef<str>) {
+        println!("{}", response.as_ref())
+    }
+
     fn ask_text(prompt: &str) -> anyhow::Result<String> {
         let result = dialoguer::Input::new()
             .report(false)
@@ -156,7 +180,10 @@ impl IndexController {
             config.set_last_used_provider(Some(provider));
             config.try_write()?;
 
-            Self::print_markdown(&answer.response());
+            match self.output {
+                OutputMode::Markdown => Self::print_markdown(&answer.response()),
+                OutputMode::Plain => Self::print_plain(&answer.response()),
+            }
 
             Ok(messages)
         })?;
