@@ -18,4 +18,8 @@ impl TemplateEnv {
     pub fn prompt_dir(&self) -> Option<&Path> {
         self.prompt_path.parent()
     }
+
+    pub fn cwd(&self) -> Option<PathBuf> {
+        std::env::current_dir().ok()
+    }
 }
