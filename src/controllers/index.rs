@@ -65,7 +65,9 @@ impl IndexController {
         let file = dialoguer::FuzzySelect::new()
             .report(false)
             .clear(true)
-            .pick_file(&root, |v| v.to_string_lossy().to_string().ends_with(".md"))?;
+            .pick_file("Pick prompt file", &root, |v| {
+                v.to_string_lossy().to_string().ends_with(".md")
+            })?;
         file.ok_or_else(|| anyhow::Error::msg("Failed to pick file"))
     }
 
