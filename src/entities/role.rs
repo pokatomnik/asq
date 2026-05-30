@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub(crate) enum Role {
     #[serde(rename = "user")]
     User,
@@ -12,6 +12,9 @@ pub(crate) enum Role {
 
     #[serde(rename = "system")]
     System,
+
+    #[serde(rename = "tools")]
+    Tools,
 }
 
 impl Display for Role {
@@ -20,6 +23,7 @@ impl Display for Role {
             Role::User => f.write_str("user"),
             Role::Assistant => f.write_str("assistant"),
             Role::System => f.write_str("system"),
+            Role::Tools => f.write_str("tools"),
         }
     }
 }

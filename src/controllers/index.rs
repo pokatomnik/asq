@@ -9,7 +9,7 @@ use crate::controllers::onboard::OnboardController;
 use crate::entities::llm_provider_kind::LLMProviderKind;
 use crate::entities::message::Message;
 use crate::entities::role::Role;
-use crate::providers::llm_provider::LLMProvider;
+use crate::providers::base_provider::LLMProvider;
 use crate::services::config::Config;
 use crate::services::history::History;
 use crate::services::parser::Parser;

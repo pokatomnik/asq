@@ -2,12 +2,11 @@ use clap::Args;
 
 use crate::controllers::controller::Controller;
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
-use crate::providers::deepseek::DeepseekProvider;
-use crate::providers::ollama::OllamaProvider;
-use crate::providers::openai_like::OpenAILikeProvider;
-use crate::providers::openrouter::OpenrouterProvider;
+use crate::providers::deepseek::init_deepseek;
+use crate::providers::ollama::init_ollama;
+use crate::providers::openai_like::init_openai_like;
+use crate::providers::openrouter::init_openrouter;
 use crate::services::config::Config;
-use crate::utils::init_interactive::InitInteractive;
 
 #[derive(Args, Clone, Debug)]
 pub(crate) struct ProvidersAddController {}
@@ -38,18 +37,10 @@ impl Controller for ProvidersAddController {
     fn handle(&self) -> anyhow::Result<()> {
         let new_provider_kind = Self::ask_kind()?;
         let new_provider = match new_provider_kind {
-            LLMProviderKindOnly::Ollama => {
-                LLMProviderKind::Ollama(OllamaProvider::init_interactive()?)
-            }
-            LLMProviderKindOnly::Openrouter => {
-                LLMProviderKind::Openrouter(OpenrouterProvider::init_interactive()?)
-            }
-            LLMProviderKindOnly::Deepseek => {
-                LLMProviderKind::Deepseek(DeepseekProvider::init_interactive()?)
-            }
-            LLMProviderKindOnly::OpenAILike => {
-                LLMProviderKind::OpenAILike(OpenAILikeProvider::init_interactive()?)
-            }
+            LLMProviderKindOnly::Ollama => LLMProviderKind::Ollama(init_ollama()?),
+            LLMProviderKindOnly::Openrouter => LLMProviderKind::Openrouter(init_openrouter()?),
+            LLMProviderKindOnly::Deepseek => LLMProviderKind::Deepseek(init_deepseek()?),
+            LLMProviderKindOnly::OpenAILike => LLMProviderKind::OpenAILike(init_openai_like()?),
         };
         let mut config = Config::try_read()?;
 
