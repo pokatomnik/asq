@@ -7,6 +7,7 @@ use dialoguer::FuzzySelect;
 pub(crate) trait FilePicker {
     fn pick_file(
         &self,
+        prompt: &str,
         root: impl AsRef<Path>,
         filter_file: impl Fn(&Path) -> bool,
     ) -> anyhow::Result<Option<PathBuf>>;
@@ -97,6 +98,7 @@ fn get_list_items(
 impl<'a> FilePicker for FuzzySelect<'a> {
     fn pick_file(
         &self,
+        prompt: &str,
         root: impl AsRef<Path>,
         filter_file: impl Fn(&Path) -> bool,
     ) -> anyhow::Result<Option<PathBuf>> {
@@ -107,7 +109,7 @@ impl<'a> FilePicker for FuzzySelect<'a> {
             let dir_contents =
                 get_list_items(current == initial_root, current.as_path(), &filter_file)?;
             let idx = dialoguer::FuzzySelect::new()
-                .with_prompt("Pick a file")
+                .with_prompt(prompt)
                 .items(&dir_contents)
                 .default(0)
                 .highlight_matches(true)

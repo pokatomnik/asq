@@ -37,7 +37,7 @@ impl FilePicker {
 }
 
 impl PipeOperator for FilePicker {
-    fn handle(&self, prompt_base: &str) -> anyhow::Result<String> {
+    fn handle(&self, _: &str) -> anyhow::Result<String> {
         let mut files = Vec::<(PathBuf, String)>::new();
         let mut paths = std::collections::HashSet::new();
 
@@ -48,17 +48,19 @@ impl PipeOperator for FilePicker {
             .ok_or_else(|| anyhow::Error::msg("Failed to get current directory"))?;
 
         while proceed {
-            let mut prompt = prompt_base.to_string();
-            if files.len() > 0 {
-                prompt.push_str(format!(" ({} file(s) included)", files.len()).as_str());
-            }
+            let files_str = files
+                .iter()
+                .filter_map(|(p, _)| p.file_name())
+                .map(|fname| fname.to_string_lossy().to_string())
+                .collect::<Vec<String>>()
+                .join(", ");
+            let prompt = format!("Files included: [{}]", files_str);
 
             let file = dialoguer::FuzzySelect::new()
-                .with_prompt(prompt)
                 .highlight_matches(true)
                 .clear(true)
                 .report(false)
-                .pick_file(root.as_path(), |_| true)?;
+                .pick_file(prompt.as_str(), root.as_path(), |_| true)?;
             let Some(file_path) = file else {
                 proceed = Self::confirm_continue();
                 continue;
