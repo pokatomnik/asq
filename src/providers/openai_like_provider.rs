@@ -163,6 +163,7 @@ pub(crate) fn list_models(
     let endpoint_url = format!("{}/models", endpoint_url.as_ref().trim().trim_matches('/'));
     let response = with_spinner(
         "Loading models...",
+        "Loading models done",
         || -> anyhow::Result<Response, anyhow::Error> {
             let result = client
                 .request(Method::GET, endpoint_url.as_str())
