@@ -30,7 +30,10 @@ impl LLMProxy {
 
     fn ask_proxy_scheme() -> anyhow::Result<String> {
         let result = dialoguer::Input::<String>::new()
-            .with_prompt("Specify proxy, example: \"socks5h://127.0.0.1:1080\"")
+            .with_prompt("Specify proxy connect URL")
+            .default("socks5h://127.0.0.1:1080".to_string())
+            .show_default(true)
+            .report(false)
             .interact()?;
         Ok(result)
     }

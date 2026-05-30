@@ -9,7 +9,7 @@ use crate::controllers::onboard::OnboardController;
 use crate::entities::llm_provider_kind::LLMProviderKind;
 use crate::entities::message::Message;
 use crate::entities::role::Role;
-use crate::providers::llm_provider::LLMProvider;
+use crate::providers::openai_like_provider::LLMProvider;
 use crate::services::config::Config;
 use crate::services::history::History;
 use crate::services::parser::Parser;
@@ -144,9 +144,6 @@ impl IndexController {
                 with_spinner(
                     format!("{} answer:", &provider.to_string()),
                     || match provider {
-                        LLMProviderKind::Ollama(ref ollama_provider) => {
-                            ollama_provider.ask(&prompt_text, messages.clone())
-                        }
                         LLMProviderKind::Openrouter(ref openrouter_provider) => {
                             openrouter_provider.ask(&prompt_text, messages.clone())
                         }
