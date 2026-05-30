@@ -8,7 +8,6 @@ use crate::controllers::controller::Controller;
 use crate::controllers::onboard::OnboardController;
 use crate::entities::llm_provider_kind::LLMProviderKind;
 use crate::entities::message::Message;
-use crate::entities::prompt::{FrondmatterKind, Prompt};
 use crate::entities::role::Role;
 use crate::providers::llm_provider::LLMProvider;
 use crate::services::config::Config;
@@ -106,20 +105,6 @@ impl IndexController {
         Ok(provider.to_owned())
     }
 
-    fn prepare_raw_prompt(prompt: &str, raw: &str) -> String {
-        let warning_header = include_str!("./raw_frontmatter.md");
-        format!("{prompt}\n{warning_header}\n{raw}")
-    }
-
-    fn prepare_prompt(prompt: &Prompt) -> impl AsRef<str> {
-        match (prompt.frontmatter(), prompt.prompt()) {
-            (Some(frontmatter), prompt) => match frontmatter {
-                FrondmatterKind::Raw(raw) => Self::prepare_raw_prompt(prompt, raw),
-            },
-            (None, prompt) => prompt.to_string(),
-        }
-    }
-
     fn print_markdown(response: impl AsRef<str>) {
         let output = marcli::render(response.as_ref(), &Default::default());
         println!("{}", output);
@@ -150,8 +135,7 @@ impl IndexController {
                 let template_env = Arc::new(TemplateEnv::new(&prompt_path));
                 let parser = Parser::try_create(template_env)?;
                 let prompt_str = parser.compile(&contents)?;
-                let prompt = Prompt::new(prompt_str);
-                Self::prepare_prompt(&prompt).as_ref().to_string()
+                prompt_str
             }
         };
 
