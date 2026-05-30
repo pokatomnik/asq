@@ -140,24 +140,27 @@ impl IndexController {
         };
 
         history.with_history(|messages| {
-            let answer =
-                with_spinner(
-                    format!("{} answer:", &provider.to_string()),
-                    || match provider {
-                        LLMProviderKind::Openrouter(ref openrouter_provider) => {
-                            openrouter_provider.ask(&prompt_text, messages.clone())
-                        }
-                        LLMProviderKind::Deepseek(ref deepseek_provider) => {
-                            deepseek_provider.ask(&prompt_text, messages.clone())
-                        }
-                        LLMProviderKind::OpenAILike(ref openai_like_provider) => {
-                            openai_like_provider.ask(&prompt_text, messages.clone())
-                        }
-                        LLMProviderKind::Gemini(ref gemini_provider) => {
-                            gemini_provider.ask(&prompt_text, messages.clone())
-                        }
-                    },
-                )?;
+            let answer = with_spinner(
+                "Thinking...",
+                format!("{} answer:", &provider.to_string()),
+                || match provider {
+                    LLMProviderKind::Openrouter(ref openrouter_provider) => {
+                        openrouter_provider.ask(&prompt_text, messages.clone())
+                    }
+                    LLMProviderKind::Deepseek(ref deepseek_provider) => {
+                        deepseek_provider.ask(&prompt_text, messages.clone())
+                    }
+                    LLMProviderKind::OpenAILike(ref openai_like_provider) => {
+                        openai_like_provider.ask(&prompt_text, messages.clone())
+                    }
+                    LLMProviderKind::Gemini(ref gemini_provider) => {
+                        gemini_provider.ask(&prompt_text, messages.clone())
+                    }
+                    LLMProviderKind::NVidia(ref nvidia_provider) => {
+                        nvidia_provider.ask(&prompt_text, messages.clone())
+                    }
+                },
+            )?;
 
             let mut messages = messages;
             messages.push(Message::new(Role::User, &prompt_text));

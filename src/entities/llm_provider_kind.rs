@@ -17,6 +17,7 @@ pub(crate) enum LLMProviderKind {
     Deepseek(OpenAILikeProvider),
     OpenAILike(OpenAILikeProvider),
     Gemini(OpenAILikeProvider),
+    NVidia(OpenAILikeProvider),
 }
 
 impl AsRef<LLMProviderKind> for LLMProviderKind {
@@ -32,6 +33,7 @@ impl Describe for LLMProviderKind {
             LLMProviderKind::Deepseek(deepseek_provider) => deepseek_provider.describe(),
             LLMProviderKind::OpenAILike(openai_like_provider) => openai_like_provider.describe(),
             LLMProviderKind::Gemini(gemini_provider) => gemini_provider.describe(),
+            LLMProviderKind::NVidia(nvidia_provider) => nvidia_provider.describe(),
         }
     }
 }
@@ -47,6 +49,7 @@ impl Display for LLMProviderKind {
                 f.write_str(openai_like_provider.name())
             }
             LLMProviderKind::Gemini(gemini) => f.write_str(gemini.name()),
+            LLMProviderKind::NVidia(nvidia) => f.write_str(nvidia.name()),
         }
     }
 }
@@ -58,6 +61,7 @@ impl Display for LLMProviderKindOnly {
             LLMProviderKindOnly::Deepseek => f.write_str("Deepseek"),
             LLMProviderKindOnly::OpenAILike => f.write_str("OpenAI-like"),
             LLMProviderKindOnly::Gemini => f.write_str("Gemini"),
+            LLMProviderKindOnly::NVidia => f.write_str("NVidia"),
         }
     }
 }
