@@ -153,6 +153,9 @@ impl IndexController {
                         LLMProviderKind::OpenAILike(ref openai_like_provider) => {
                             openai_like_provider.ask(&prompt_text, messages.clone())
                         }
+                        LLMProviderKind::Gemini(ref gemini_provider) => {
+                            gemini_provider.ask(&prompt_text, messages.clone())
+                        }
                     },
                 )?;
 

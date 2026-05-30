@@ -3,6 +3,7 @@ use clap::Args;
 use crate::controllers::controller::Controller;
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
 use crate::providers::deepseek::init_deepseek;
+use crate::providers::gemini::init_gemini;
 use crate::providers::openai_like::init_openai_like;
 use crate::providers::openrouter::init_openrouter;
 use crate::services::config::Config;
@@ -16,6 +17,7 @@ impl ProvidersAddController {
             LLMProviderKindOnly::Openrouter,
             LLMProviderKindOnly::Deepseek,
             LLMProviderKindOnly::OpenAILike,
+            LLMProviderKindOnly::Gemini,
         ];
         let kind_idx = dialoguer::FuzzySelect::new()
             .report(false)
@@ -38,6 +40,7 @@ impl Controller for ProvidersAddController {
             LLMProviderKindOnly::Openrouter => LLMProviderKind::Openrouter(init_openrouter()?),
             LLMProviderKindOnly::Deepseek => LLMProviderKind::Deepseek(init_deepseek()?),
             LLMProviderKindOnly::OpenAILike => LLMProviderKind::OpenAILike(init_openai_like()?),
+            LLMProviderKindOnly::Gemini => LLMProviderKind::Gemini(init_gemini()?),
         };
         let mut config = Config::try_read()?;
 

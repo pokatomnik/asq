@@ -16,6 +16,7 @@ pub(crate) enum LLMProviderKind {
     Openrouter(OpenAILikeProvider),
     Deepseek(OpenAILikeProvider),
     OpenAILike(OpenAILikeProvider),
+    Gemini(OpenAILikeProvider),
 }
 
 impl AsRef<LLMProviderKind> for LLMProviderKind {
@@ -30,6 +31,7 @@ impl Describe for LLMProviderKind {
             LLMProviderKind::Openrouter(openrouter_provider) => openrouter_provider.describe(),
             LLMProviderKind::Deepseek(deepseek_provider) => deepseek_provider.describe(),
             LLMProviderKind::OpenAILike(openai_like_provider) => openai_like_provider.describe(),
+            LLMProviderKind::Gemini(gemini_provider) => gemini_provider.describe(),
         }
     }
 }
@@ -44,6 +46,7 @@ impl Display for LLMProviderKind {
             LLMProviderKind::OpenAILike(openai_like_provider) => {
                 f.write_str(openai_like_provider.name())
             }
+            LLMProviderKind::Gemini(gemini) => f.write_str(gemini.name()),
         }
     }
 }
@@ -54,6 +57,7 @@ impl Display for LLMProviderKindOnly {
             LLMProviderKindOnly::Openrouter => f.write_str("Openrouter"),
             LLMProviderKindOnly::Deepseek => f.write_str("Deepseek"),
             LLMProviderKindOnly::OpenAILike => f.write_str("OpenAI-like"),
+            LLMProviderKindOnly::Gemini => f.write_str("Gemini"),
         }
     }
 }
