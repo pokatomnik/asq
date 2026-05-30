@@ -1,12 +1,12 @@
 use crate::entities::proxy::LLMProxy;
-use crate::providers::base_provider::BaseProvider;
-use crate::providers::base_provider::ask_endpoint_url;
-use crate::providers::base_provider::ask_model;
-use crate::providers::base_provider::ask_name;
-use crate::providers::base_provider::ask_token_key;
+use crate::providers::openai_like_provider::OpenAILikeProvider;
+use crate::providers::openai_like_provider::ask_endpoint_url;
+use crate::providers::openai_like_provider::ask_model;
+use crate::providers::openai_like_provider::ask_name;
+use crate::providers::openai_like_provider::ask_token_key;
 use crate::utils::init_interactive::InitInteractive;
 
-pub(crate) fn init_openai_like() -> anyhow::Result<BaseProvider> {
+pub(crate) fn init_openai_like() -> anyhow::Result<OpenAILikeProvider> {
     let name = ask_name("Specify OpenAI-like provider name")?;
     let endpoint_url = ask_endpoint_url(
         "Specify OpenAI-like endpoint URL",
@@ -23,7 +23,8 @@ pub(crate) fn init_openai_like() -> anyhow::Result<BaseProvider> {
         proxy_scheme.clone(),
     )?;
 
-    let provider = BaseProvider::new(name, endpoint_url.as_str(), token_key, model, proxy_scheme);
+    let provider =
+        OpenAILikeProvider::new(name, endpoint_url.as_str(), token_key, model, proxy_scheme);
 
     Ok(provider)
 }

@@ -14,7 +14,7 @@ use crate::utils::request_builder_ext::RequestBuilderExt;
 use crate::utils::with_spinner::with_spinner;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub(crate) struct BaseProvider {
+pub(crate) struct OpenAILikeProvider {
     #[serde(rename = "name")]
     name: String,
 
@@ -34,7 +34,7 @@ pub(crate) struct BaseProvider {
     proxy: Option<LLMProxy>,
 }
 
-impl BaseProvider {
+impl OpenAILikeProvider {
     pub fn new(
         name: impl Into<String>,
         endpoint_url: impl Into<String>,
@@ -77,7 +77,7 @@ impl BaseProvider {
     }
 }
 
-impl LLMProvider for BaseProvider {
+impl LLMProvider for OpenAILikeProvider {
     fn ask(
         &self,
         prompt: impl AsRef<str>,
@@ -121,14 +121,16 @@ impl LLMProvider for BaseProvider {
             ))
         }
 
-        let result: BaseProviderGenerateResponse = response.text()?.try_into()?;
+        let result: OpenAILikeProviderGenerateResponse = response.text()?.try_into()?;
 
         let llm_response_message = result
             .choices
             .get(0)
             .ok_or_else(|| anyhow::Error::msg("No response from model"))?;
 
-        if llm_response_message.finish_reason != BaseProviderGenerateResponseFinishReason::Stop {
+        if llm_response_message.finish_reason
+            != OpenAILikeProviderGenerateResponseFinishReason::Stop
+        {
             anyhow::bail!(
                 "Unexpected LLM response: {}",
                 llm_response_message.finish_reason
@@ -173,7 +175,8 @@ pub(crate) fn list_models(
 
     let result_json = response.text()?;
 
-    let parsed_result = serde_json::from_str::<BaseProviderModelsResponse>(result_json.as_str())?;
+    let parsed_result =
+        serde_json::from_str::<OpenAILikeProviderModelsResponse>(result_json.as_str())?;
     let model_names = parsed_result
         .data
         .iter()
@@ -252,22 +255,22 @@ pub(crate) fn ask_model(
 }
 
 #[derive(Deserialize)]
-struct BaseProviderGenerateResponse {
+struct OpenAILikeProviderGenerateResponse {
     #[serde(rename = "choices")]
-    choices: Vec<BaseGenerateResponseChoice>,
+    choices: Vec<OpenAILikeProviderGenerateResponseChoice>,
 }
 
 #[derive(Deserialize)]
-struct BaseGenerateResponseChoice {
+struct OpenAILikeProviderGenerateResponseChoice {
     #[serde(rename = "finish_reason")]
-    finish_reason: BaseProviderGenerateResponseFinishReason,
+    finish_reason: OpenAILikeProviderGenerateResponseFinishReason,
 
     #[serde(rename = "message")]
-    message: BaseGenerateResponseMessage,
+    message: OpenAILikeProviderGenerateResponseMessage,
 }
 
 #[derive(serde::Deserialize)]
-struct BaseGenerateResponseMessage {
+struct OpenAILikeProviderGenerateResponseMessage {
     #[serde(rename = "role")]
     role: Role,
 
@@ -276,7 +279,7 @@ struct BaseGenerateResponseMessage {
 }
 
 #[derive(serde::Deserialize, Clone, Copy, PartialEq, PartialOrd)]
-enum BaseProviderGenerateResponseFinishReason {
+enum OpenAILikeProviderGenerateResponseFinishReason {
     #[serde(rename = "stop")]
     Stop,
 
@@ -293,21 +296,21 @@ enum BaseProviderGenerateResponseFinishReason {
     Error,
 }
 
-impl Display for BaseProviderGenerateResponseFinishReason {
+impl Display for OpenAILikeProviderGenerateResponseFinishReason {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            BaseProviderGenerateResponseFinishReason::Stop => f.write_str("stop"),
-            BaseProviderGenerateResponseFinishReason::Length => f.write_str("length"),
-            BaseProviderGenerateResponseFinishReason::ToolCalls => f.write_str("tool_calls"),
-            BaseProviderGenerateResponseFinishReason::ContentFilter => {
+            OpenAILikeProviderGenerateResponseFinishReason::Stop => f.write_str("stop"),
+            OpenAILikeProviderGenerateResponseFinishReason::Length => f.write_str("length"),
+            OpenAILikeProviderGenerateResponseFinishReason::ToolCalls => f.write_str("tool_calls"),
+            OpenAILikeProviderGenerateResponseFinishReason::ContentFilter => {
                 f.write_str("content_filter")
             }
-            BaseProviderGenerateResponseFinishReason::Error => f.write_str("error"),
+            OpenAILikeProviderGenerateResponseFinishReason::Error => f.write_str("error"),
         }
     }
 }
 
-impl Describe for BaseProvider {
+impl Describe for OpenAILikeProvider {
     fn describe(&self) -> String {
         let mut result = String::with_capacity(50);
         result.push_str(format!("Name: {}\n", self.name()).as_str());
@@ -328,22 +331,22 @@ impl Describe for BaseProvider {
     }
 }
 
-impl TryFrom<String> for BaseProviderGenerateResponse {
+impl TryFrom<String> for OpenAILikeProviderGenerateResponse {
     type Error = anyhow::Error;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        let result = serde_json::from_str::<BaseProviderGenerateResponse>(value.as_str())?;
+        let result = serde_json::from_str::<OpenAILikeProviderGenerateResponse>(value.as_str())?;
         Ok(result)
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct BaseProviderModelsResponse {
-    data: Vec<BaseProviderModelDescription>,
+struct OpenAILikeProviderModelsResponse {
+    data: Vec<OpenAILikeProviderModelDescription>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct BaseProviderModelDescription {
+struct OpenAILikeProviderModelDescription {
     id: String,
 }
 

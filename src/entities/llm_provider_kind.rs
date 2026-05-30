@@ -3,7 +3,7 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumDiscriminants;
 
-use crate::{providers::base_provider::BaseProvider, utils::describe::Describe};
+use crate::{providers::openai_like_provider::OpenAILikeProvider, utils::describe::Describe};
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumDiscriminants)]
 #[serde(tag = "kind")]
@@ -13,9 +13,9 @@ use crate::{providers::base_provider::BaseProvider, utils::describe::Describe};
     derive(Serialize, Deserialize)
 )]
 pub(crate) enum LLMProviderKind {
-    Openrouter(BaseProvider),
-    Deepseek(BaseProvider),
-    OpenAILike(BaseProvider),
+    Openrouter(OpenAILikeProvider),
+    Deepseek(OpenAILikeProvider),
+    OpenAILike(OpenAILikeProvider),
 }
 
 impl AsRef<LLMProviderKind> for LLMProviderKind {
