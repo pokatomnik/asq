@@ -3,7 +3,6 @@ use clap::Args;
 use crate::controllers::controller::Controller;
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
 use crate::providers::deepseek::init_deepseek;
-use crate::providers::ollama::init_ollama;
 use crate::providers::openai_like::init_openai_like;
 use crate::providers::openrouter::init_openrouter;
 use crate::services::config::Config;
@@ -14,7 +13,6 @@ pub(crate) struct ProvidersAddController {}
 impl ProvidersAddController {
     fn ask_kind() -> anyhow::Result<LLMProviderKindOnly> {
         let all_kinds = vec![
-            LLMProviderKindOnly::Ollama,
             LLMProviderKindOnly::Openrouter,
             LLMProviderKindOnly::Deepseek,
             LLMProviderKindOnly::OpenAILike,
@@ -37,7 +35,6 @@ impl Controller for ProvidersAddController {
     fn handle(&self) -> anyhow::Result<()> {
         let new_provider_kind = Self::ask_kind()?;
         let new_provider = match new_provider_kind {
-            LLMProviderKindOnly::Ollama => LLMProviderKind::Ollama(init_ollama()?),
             LLMProviderKindOnly::Openrouter => LLMProviderKind::Openrouter(init_openrouter()?),
             LLMProviderKindOnly::Deepseek => LLMProviderKind::Deepseek(init_deepseek()?),
             LLMProviderKindOnly::OpenAILike => LLMProviderKind::OpenAILike(init_openai_like()?),

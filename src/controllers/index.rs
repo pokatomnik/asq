@@ -144,9 +144,6 @@ impl IndexController {
                 with_spinner(
                     format!("{} answer:", &provider.to_string()),
                     || match provider {
-                        LLMProviderKind::Ollama(ref ollama_provider) => {
-                            ollama_provider.ask(&prompt_text, messages.clone())
-                        }
                         LLMProviderKind::Openrouter(ref openrouter_provider) => {
                             openrouter_provider.ask(&prompt_text, messages.clone())
                         }

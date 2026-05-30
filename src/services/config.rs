@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::entities::llm_provider_kind::{LLMProviderKind, LLMProviderKindOnly};
 use crate::providers::deepseek::init_deepseek;
-use crate::providers::ollama::init_ollama;
 use crate::providers::openai_like::init_openai_like;
 use crate::providers::openrouter::init_openrouter;
 use crate::utils::fileman;
@@ -115,7 +114,6 @@ impl Config {
     fn ask_provider() -> anyhow::Result<LLMProviderKind> {
         let kind = Self::ask_kind()?;
         match kind {
-            LLMProviderKindOnly::Ollama => Ok(LLMProviderKind::Ollama(init_ollama()?)),
             LLMProviderKindOnly::Openrouter => Ok(LLMProviderKind::Openrouter(init_openrouter()?)),
             LLMProviderKindOnly::Deepseek => Ok(LLMProviderKind::Deepseek(init_deepseek()?)),
             LLMProviderKindOnly::OpenAILike => Ok(LLMProviderKind::OpenAILike(init_openai_like()?)),
@@ -124,7 +122,6 @@ impl Config {
 
     fn ask_kind() -> anyhow::Result<LLMProviderKindOnly> {
         let all_kinds = vec![
-            LLMProviderKindOnly::Ollama,
             LLMProviderKindOnly::Openrouter,
             LLMProviderKindOnly::Deepseek,
             LLMProviderKindOnly::OpenAILike,

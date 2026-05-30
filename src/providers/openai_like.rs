@@ -12,7 +12,7 @@ pub(crate) fn init_openai_like() -> anyhow::Result<BaseProvider> {
         "Specify OpenAI-like endpoint URL",
         Some("http://127.0.0.1:11434/v1"),
     )?;
-    let token_key = ask_token_key(true)?;
+    let token_key = ask_token_key(false)?;
     let token = token_key.as_ref().and_then(|tk| std::env::var(tk).ok());
 
     let proxy_scheme = Option::<LLMProxy>::init_interactive()?;

@@ -13,7 +13,6 @@ use crate::{providers::base_provider::BaseProvider, utils::describe::Describe};
     derive(Serialize, Deserialize)
 )]
 pub(crate) enum LLMProviderKind {
-    Ollama(BaseProvider),
     Openrouter(BaseProvider),
     Deepseek(BaseProvider),
     OpenAILike(BaseProvider),
@@ -28,7 +27,6 @@ impl AsRef<LLMProviderKind> for LLMProviderKind {
 impl Describe for LLMProviderKind {
     fn describe(&self) -> String {
         match self {
-            LLMProviderKind::Ollama(ollama_provider) => ollama_provider.describe(),
             LLMProviderKind::Openrouter(openrouter_provider) => openrouter_provider.describe(),
             LLMProviderKind::Deepseek(deepseek_provider) => deepseek_provider.describe(),
             LLMProviderKind::OpenAILike(openai_like_provider) => openai_like_provider.describe(),
@@ -39,7 +37,6 @@ impl Describe for LLMProviderKind {
 impl Display for LLMProviderKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LLMProviderKind::Ollama(ollama_provider) => f.write_str(ollama_provider.name()),
             LLMProviderKind::Openrouter(openrouter_provider) => {
                 f.write_str(openrouter_provider.name())
             }
@@ -54,7 +51,6 @@ impl Display for LLMProviderKind {
 impl Display for LLMProviderKindOnly {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LLMProviderKindOnly::Ollama => f.write_str("Ollama"),
             LLMProviderKindOnly::Openrouter => f.write_str("Openrouter"),
             LLMProviderKindOnly::Deepseek => f.write_str("Deepseek"),
             LLMProviderKindOnly::OpenAILike => f.write_str("OpenAI-like"),
