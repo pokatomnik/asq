@@ -29,6 +29,17 @@ fn main() -> anyhow::Result<()> {
                     operators_list_controller.handle()
                 }
             },
+            Commands::Memories(memories_actions) => match memories_actions {
+                cmd::memories::MemoriesActions::List(memories_list_controller) => {
+                    memories_list_controller.handle()
+                }
+                cmd::memories::MemoriesActions::Add(memories_add_controller) => {
+                    memories_add_controller.handle()
+                }
+                cmd::memories::MemoriesActions::Delete(memories_delete_controller) => {
+                    memories_delete_controller.handle()
+                }
+            },
         },
         None => cli.index.handle(),
     };
