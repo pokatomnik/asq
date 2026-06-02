@@ -4,12 +4,15 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub(crate) trait Tool<T> {
+    /// Get the name of this tool
+    fn name() -> &'static str;
+
     /// Get JSON Schema definition for this tool
     fn schema_def() -> anyhow::Result<Value>;
 
     /// Execute tool
     /// Execute tool and get `String` result Or error
-    fn execute(arg: T) -> anyhow::Result<String>;
+    fn execute(&self, arg: &T) -> anyhow::Result<String>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

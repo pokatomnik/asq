@@ -145,19 +145,19 @@ impl IndexController {
                 format!("{} answer:", &provider.to_string()),
                 || match provider {
                     LLMProviderKind::Openrouter(ref openrouter_provider) => {
-                        openrouter_provider.ask(&prompt_text, messages.clone())
+                        openrouter_provider.ask(&prompt_text, Role::User, messages.clone())
                     }
                     LLMProviderKind::Deepseek(ref deepseek_provider) => {
-                        deepseek_provider.ask(&prompt_text, messages.clone())
+                        deepseek_provider.ask(&prompt_text, Role::User, messages.clone())
                     }
                     LLMProviderKind::OpenAILike(ref openai_like_provider) => {
-                        openai_like_provider.ask(&prompt_text, messages.clone())
+                        openai_like_provider.ask(&prompt_text, Role::User, messages.clone())
                     }
                     LLMProviderKind::Gemini(ref gemini_provider) => {
-                        gemini_provider.ask(&prompt_text, messages.clone())
+                        gemini_provider.ask(&prompt_text, Role::User, messages.clone())
                     }
                     LLMProviderKind::NVidia(ref nvidia_provider) => {
-                        nvidia_provider.ask(&prompt_text, messages.clone())
+                        nvidia_provider.ask(&prompt_text, Role::User, messages.clone())
                     }
                 },
             )?;

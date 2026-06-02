@@ -1,13 +1,17 @@
 use std::{cell::OnceCell, fmt::Display};
 
-use reqwest::blocking::Response;
+use reqwest::blocking::{Client, RequestBuilder, Response};
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::entities::consts::DEFAULT_TIMEOUT;
 use crate::entities::message::Message;
 use crate::entities::proxy::LLMProxy;
 use crate::entities::role::Role;
+use crate::tools::memory::Memory;
+use crate::tools::tool::Tool;
+use crate::tools::tool_executor::ToolExecutor;
 use crate::utils::client_builder_ext::ClientBuilderExt;
 use crate::utils::describe::Describe;
 use crate::utils::request_builder_ext::RequestBuilderExt;
@@ -75,49 +79,78 @@ impl OpenAILikeProvider {
     pub fn proxy(&self) -> Option<&LLMProxy> {
         self.proxy.as_ref()
     }
-}
 
-impl LLMProvider for OpenAILikeProvider {
-    fn ask(
-        &self,
-        prompt: impl AsRef<str>,
-        history: impl IntoIterator<Item = Message>,
-    ) -> anyhow::Result<LLMAnswer> {
-        let model = self.model();
-        let prompt = prompt.as_ref();
-
-        let mut messages = history
-            .into_iter()
-            .map(|m| LLMProviderMessage::new(*m.role(), m.contents()))
-            .collect::<Vec<LLMProviderMessage>>();
-
-        messages.push(LLMProviderMessage::new(Role::User, prompt));
-
-        let body = LLMProviderRequestBody::new(model, messages, false);
-
-        let body_json_str = serde_json::to_string(&body)?;
-
+    fn prepare_client(&self) -> anyhow::Result<Client> {
         let client = reqwest::blocking::ClientBuilder::new()
             .timeout(DEFAULT_TIMEOUT)
             .with_optional_proxy(self.proxy().as_ref())
             .build()?;
 
+        Ok(client)
+    }
+
+    fn prepare_request(&self) -> anyhow::Result<RequestBuilder> {
+        let client = self.prepare_client()?;
         let token = self.auth_token();
         let url = format!(
             "{}/chat/completions",
             self.endpoint_url.trim().trim_matches('/')
         );
-        let request_builder = client
+        let request = client
             .request(Method::POST, url)
             .application_json()
             .with_optional_bearer_token(token);
+        Ok(request)
+    }
 
+    fn execute_tools(
+        &self,
+        tool_calls: &Vec<ToolCallRequest>,
+        history: Vec<Message>,
+    ) -> anyhow::Result<LLMAnswer> {
+        let tools_executor = ToolExecutor::new();
+        let mut tool_call_results = Vec::with_capacity(tool_calls.len());
+        for tool in tool_calls {
+            let result = tools_executor.call_by_name(
+                tool.function.name.as_str(),
+                tool.function.arguments.as_str(),
+            )?;
+            tool_call_results.push(result);
+        }
+
+        self.ask(
+            format!("Tool call results:\n{}", tool_call_results.join("\n")).as_str(),
+            Role::Tool,
+            history,
+        )
+    }
+}
+
+impl LLMProvider for OpenAILikeProvider {
+    fn ask(&self, prompt: &str, role: Role, history: Vec<Message>) -> anyhow::Result<LLMAnswer> {
+        let model = self.model();
+        let prompt = prompt.as_ref();
+
+        let mut messages = history
+            .iter()
+            .map(|m| LLMProviderMessage::new(*m.role(), m.contents()))
+            .collect::<Vec<LLMProviderMessage>>();
+
+        messages.push(LLMProviderMessage::new(role, prompt));
+
+        let tools = Memory::schema_def()
+            .map(|v| vec![v])
+            .unwrap_or_else(|_| vec![]);
+        let body = LLMProviderRequestBody::new(model, messages, tools, false);
+        let body_json_str = serde_json::to_string(&body)?;
+        let request_builder = self.prepare_request()?;
         let response = request_builder.body(body_json_str).send()?;
 
         if response.status() != StatusCode::OK {
             anyhow::bail!(format!(
-                "Server responded with status: {}",
-                response.status()
+                "Server responded with status: {}, text: {}",
+                response.status(),
+                response.text()?,
             ))
         }
 
@@ -128,15 +161,6 @@ impl LLMProvider for OpenAILikeProvider {
             .get(0)
             .ok_or_else(|| anyhow::Error::msg("No response from model"))?;
 
-        if llm_response_message.finish_reason
-            != OpenAILikeProviderGenerateResponseFinishReason::Stop
-        {
-            anyhow::bail!(
-                "Unexpected LLM response: {}",
-                llm_response_message.finish_reason
-            );
-        }
-
         if llm_response_message.message.role != Role::Assistant {
             anyhow::bail!(
                 "Unexpected LLM response role: {}",
@@ -144,9 +168,25 @@ impl LLMProvider for OpenAILikeProvider {
             );
         }
 
-        Ok(LLMAnswer::new(
-            llm_response_message.message.content.as_str(),
-        ))
+        match (
+            &llm_response_message
+                .message
+                .content
+                .clone()
+                .unwrap_or_default(),
+            &llm_response_message.message.tool_calls,
+        ) {
+            (message, None) if !message.is_empty() => {
+                Err(anyhow::Error::msg("No response from provider"))
+            }
+            (message, Some(tool_calls)) if message.is_empty() => {
+                self.execute_tools(tool_calls, history)
+            }
+            (message, None) | (message, Some(_)) if !message.is_empty() => {
+                Ok(LLMAnswer::new(message.as_str()))
+            }
+            _ => anyhow::bail!("Unexpected response"),
+        }
     }
 }
 
@@ -276,7 +316,46 @@ struct OpenAILikeProviderGenerateResponseMessage {
     role: Role,
 
     #[serde(rename = "content")]
-    content: String,
+    content: Option<String>,
+
+    #[serde(rename = "tool_calls")]
+    tool_calls: Option<Vec<ToolCallRequest>>,
+}
+
+#[derive(serde::Deserialize)]
+struct ToolCallRequest {
+    #[allow(unused)]
+    #[serde(rename = "id")]
+    id: Option<String>,
+
+    #[serde(rename = "type")]
+    r#type: ToolCallType,
+
+    #[serde(rename = "function")]
+    function: FunctionCallParams,
+}
+
+#[derive(serde::Deserialize)]
+struct FunctionCallParams {
+    #[serde(rename = "name")]
+    name: String,
+
+    #[serde(rename = "arguments")]
+    arguments: String,
+}
+
+#[derive(serde::Deserialize, Clone, Copy, Debug)]
+enum ToolCallType {
+    #[serde(rename = "function")]
+    Function,
+}
+
+impl Display for ToolCallType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ToolCallType::Function => f.write_str("function"),
+        }
+    }
 }
 
 #[derive(serde::Deserialize, Clone, Copy, PartialEq, PartialOrd)]
@@ -377,6 +456,9 @@ pub(crate) struct LLMProviderRequestBody {
     #[serde(rename = "messages")]
     messages: Vec<LLMProviderMessage>,
 
+    #[serde(rename = "tools")]
+    tools: Vec<Value>,
+
     #[serde(rename = "stream")]
     stream: bool,
 }
@@ -385,11 +467,13 @@ impl LLMProviderRequestBody {
     pub fn new(
         model: &str,
         messages: impl IntoIterator<Item = LLMProviderMessage>,
+        tools: impl IntoIterator<Item = Value>,
         stream: bool,
     ) -> Self {
         Self {
             model: model.to_string(),
             messages: messages.into_iter().collect(),
+            tools: tools.into_iter().collect(),
             stream,
         }
     }
@@ -412,9 +496,5 @@ impl LLMAnswer {
 }
 
 pub(crate) trait LLMProvider {
-    fn ask(
-        &self,
-        prompt: impl AsRef<str>,
-        messages: impl IntoIterator<Item = Message>,
-    ) -> anyhow::Result<LLMAnswer>;
+    fn ask(&self, prompt: &str, role: Role, messages: Vec<Message>) -> anyhow::Result<LLMAnswer>;
 }
