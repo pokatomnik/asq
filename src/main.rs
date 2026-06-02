@@ -10,6 +10,7 @@ mod controllers;
 mod entities;
 mod providers;
 mod services;
+mod tools;
 mod utils;
 
 fn main() -> anyhow::Result<()> {
