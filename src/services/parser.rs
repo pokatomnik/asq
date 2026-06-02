@@ -13,6 +13,7 @@ use crate::services::pipe_processor::operators::input::Input;
 use crate::services::pipe_processor::operators::lowercase::Lowercase;
 use crate::services::pipe_processor::operators::multiselect::Multiselect;
 use crate::services::pipe_processor::operators::password::Password;
+use crate::services::pipe_processor::operators::remember::Remember;
 use crate::services::pipe_processor::operators::select::Select;
 use crate::services::pipe_processor::pipe_processor::PipeProcessor;
 use crate::services::template_env::TemplateEnv;
@@ -58,6 +59,7 @@ impl Parser {
         let multiselect = Arc::new(Multiselect::new());
         let password = Arc::new(Password::new());
         let file_picker = Arc::new(FilePicker::new(template_env.clone()));
+        let remember = Arc::new(Remember::new());
 
         pipe_processor.register_operator("lower", lower)?;
         pipe_processor.register_operator("fetch", fetch)?;
@@ -69,6 +71,7 @@ impl Parser {
         pipe_processor.register_operator("multiselect", multiselect)?;
         pipe_processor.register_operator("password", password)?;
         pipe_processor.register_operator("file_picker", file_picker)?;
+        pipe_processor.register_operator("remember", remember)?;
 
         Ok(pipe_processor)
     }

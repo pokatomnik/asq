@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::{cell::OnceCell, fmt::Display};
 
 use reqwest::blocking::Response;
@@ -8,6 +9,8 @@ use crate::entities::consts::DEFAULT_TIMEOUT;
 use crate::entities::message::Message;
 use crate::entities::proxy::LLMProxy;
 use crate::entities::role::Role;
+use crate::services::parser::Parser;
+use crate::services::template_env::TemplateEnv;
 use crate::utils::client_builder_ext::ClientBuilderExt;
 use crate::utils::describe::Describe;
 use crate::utils::request_builder_ext::RequestBuilderExt;
@@ -74,6 +77,13 @@ impl OpenAILikeProvider {
 
     pub fn proxy(&self) -> Option<&LLMProxy> {
         self.proxy.as_ref()
+    }
+
+    fn process_llm_response(&self, response: &str) -> anyhow::Result<String> {
+        let template_env = Arc::new(TemplateEnv::new(std::env::current_dir()?));
+        let parser = Parser::try_create(template_env)?;
+        let prompt_str = parser.compile(response)?;
+        Ok(prompt_str)
     }
 }
 
@@ -144,9 +154,9 @@ impl LLMProvider for OpenAILikeProvider {
             );
         }
 
-        Ok(LLMAnswer::new(
-            llm_response_message.message.content.as_str(),
-        ))
+        let processed_result =
+            self.process_llm_response(llm_response_message.message.content.as_str())?;
+        Ok(LLMAnswer::new(processed_result.as_str()))
     }
 }
 

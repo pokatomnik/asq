@@ -1,5 +1,8 @@
 pub(crate) mod controller;
 pub(crate) mod index;
+pub(crate) mod memories_add;
+pub(crate) mod memories_delete;
+pub(crate) mod memories_list;
 pub(crate) mod onboard;
 pub(crate) mod operators_list;
 pub(crate) mod providers_add;
