@@ -13,6 +13,6 @@ impl Remember {
 impl PipeOperator for Remember {
     fn handle(&self, source: &str) -> anyhow::Result<String> {
         Memory::add_memory(source.trim().to_string())?;
-        Ok(source.to_string())
+        Ok(String::default())
     }
 }
