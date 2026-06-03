@@ -13,6 +13,7 @@ use crate::services::pipe_processor::operators::htm2text::HTM2Text;
 use crate::services::pipe_processor::operators::input::Input;
 use crate::services::pipe_processor::operators::lowercase::Lowercase;
 use crate::services::pipe_processor::operators::multiselect::Multiselect;
+use crate::services::pipe_processor::operators::now::Now;
 use crate::services::pipe_processor::operators::password::Password;
 use crate::services::pipe_processor::operators::remember::Remember;
 use crate::services::pipe_processor::operators::select::Select;
@@ -62,6 +63,7 @@ impl Parser {
         let file_picker = Arc::new(FilePicker::new(template_env.clone()));
         let files_picker = Arc::new(FilesPicker::new(template_env.clone()));
         let remember = Arc::new(Remember::new());
+        let now = Arc::new(Now::new());
 
         pipe_processor.register_operator("lower", lower)?;
         pipe_processor.register_operator("fetch", fetch)?;
@@ -75,6 +77,7 @@ impl Parser {
         pipe_processor.register_operator("file_picker", file_picker)?;
         pipe_processor.register_operator("files_picker", files_picker)?;
         pipe_processor.register_operator("remember", remember)?;
+        pipe_processor.register_operator("now", now)?;
 
         Ok(pipe_processor)
     }
