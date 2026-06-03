@@ -40,6 +40,7 @@ fn main() -> anyhow::Result<()> {
                     memories_delete_controller.handle()
                 }
             },
+            Commands::Completions(completions_controller) => completions_controller.handle(),
         },
         None => cli.index.handle(),
     };
