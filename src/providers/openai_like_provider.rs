@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use std::collections::HashSet;
+use std::sync::{Arc, Mutex, OnceLock};
 use std::{cell::OnceCell, fmt::Display};
 
 use reqwest::blocking::Response;
@@ -13,6 +14,7 @@ use crate::services::parser::Parser;
 use crate::services::template_env::TemplateEnv;
 use crate::utils::client_builder_ext::ClientBuilderExt;
 use crate::utils::describe::Describe;
+use crate::utils::random_item::RandomItem;
 use crate::utils::request_builder_ext::RequestBuilderExt;
 use crate::utils::with_spinner::with_spinner;
 
@@ -35,6 +37,9 @@ pub(crate) struct OpenAILikeProvider {
 
     #[serde(rename = "proxy")]
     proxy: Option<LLMProxy>,
+
+    #[serde(skip)]
+    tokens_used: OnceLock<Arc<Mutex<HashSet<String>>>>,
 }
 
 impl OpenAILikeProvider {
@@ -52,6 +57,7 @@ impl OpenAILikeProvider {
             model: model.into(),
             proxy,
             auth_token: Default::default(),
+            tokens_used: Default::default(),
         }
     }
 
@@ -63,12 +69,37 @@ impl OpenAILikeProvider {
         &self.endpoint_url
     }
 
-    pub fn auth_token(&self) -> Option<&str> {
-        let env_key = self.auth_token_env_key.as_deref()?;
-        self.auth_token
+    pub fn auth_token(&self) -> anyhow::Result<Option<String>> {
+        let Some(env_key) = self.auth_token_env_key.as_deref() else {
+            return Ok(None);
+        };
+        let Some(tokens_from_env) = self
+            .auth_token
             .get_or_init(|| std::env::var(env_key).ok())
             .as_ref()
-            .map(|v| v.as_str())
+            .map(|v| v.to_owned())
+        else {
+            return Ok(None);
+        };
+        let tokens_list = tokens_from_env
+            .split(",")
+            .map(|v| v.trim().to_owned())
+            .collect::<Vec<String>>();
+        let tokens_used = self.tokens_used.get_or_init(|| Arc::default()).to_owned();
+        let Ok(mut tokens_used) = tokens_used.lock() else {
+            anyhow::bail!("Failed to lock used tokens");
+        };
+
+        while tokens_used.len() != tokens_list.len() {
+            if let Some(random_token) = tokens_list.random()
+                && !tokens_used.contains(random_token)
+            {
+                tokens_used.insert(random_token.to_string());
+                return Ok(Some(random_token.to_string()));
+            }
+        }
+
+        anyhow::bail!("All tokens used")
     }
 
     pub fn model(&self) -> &str {
@@ -96,16 +127,12 @@ impl OpenAILikeProvider {
 }
 
 impl LLMProvider for OpenAILikeProvider {
-    fn ask(
-        &self,
-        prompt: impl AsRef<str>,
-        history: impl IntoIterator<Item = Message>,
-    ) -> anyhow::Result<LLMAnswer> {
+    fn ask(&self, prompt: impl AsRef<str>, history: Vec<Message>) -> anyhow::Result<LLMAnswer> {
         let model = self.model();
         let prompt = prompt.as_ref();
 
         let mut messages = history
-            .into_iter()
+            .iter()
             .map(|m| LLMProviderMessage::new(*m.role(), m.contents()))
             .collect::<Vec<LLMProviderMessage>>();
 
@@ -120,7 +147,7 @@ impl LLMProvider for OpenAILikeProvider {
             .with_optional_proxy(self.proxy().as_ref())
             .build()?;
 
-        let token = self.auth_token();
+        let token = self.auth_token()?;
         let url = format!(
             "{}/chat/completions",
             self.endpoint_url.trim().trim_matches('/')
@@ -131,6 +158,10 @@ impl LLMProvider for OpenAILikeProvider {
             .with_optional_bearer_token(token);
 
         let response = request_builder.body(body_json_str).send()?;
+
+        if response.status() == StatusCode::TOO_MANY_REQUESTS {
+            return self.ask(prompt, history);
+        }
 
         if response.status() != StatusCode::OK {
             anyhow::bail!(format!(
@@ -430,9 +461,5 @@ impl LLMAnswer {
 }
 
 pub(crate) trait LLMProvider {
-    fn ask(
-        &self,
-        prompt: impl AsRef<str>,
-        messages: impl IntoIterator<Item = Message>,
-    ) -> anyhow::Result<LLMAnswer>;
+    fn ask(&self, prompt: impl AsRef<str>, messages: Vec<Message>) -> anyhow::Result<LLMAnswer>;
 }
