@@ -1,9 +1,8 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::{
-    services::{pipe_processor::pipe_operator::PipeOperator, template_env::TemplateEnv},
-    utils::file_picker::FilePicker as FilePickerUtil,
-};
+use crate::services::pipe_processor::pipe_operator::PipeOperator;
+use crate::services::template_env::TemplateEnv;
+use crate::utils::file_picker::FilePicker as FilePickerUtil;
 
 pub(crate) struct FilePicker {
     template_env: Arc<TemplateEnv>,
@@ -37,7 +36,7 @@ impl FilePicker {
 }
 
 impl PipeOperator for FilePicker {
-    fn handle(&self, _: &str) -> anyhow::Result<String> {
+    fn handle(&self, prompt: &str) -> anyhow::Result<String> {
         let mut files = Vec::<(PathBuf, String)>::new();
         let mut paths = std::collections::HashSet::new();
 
@@ -54,7 +53,7 @@ impl PipeOperator for FilePicker {
                 .map(|fname| fname.to_string_lossy().to_string())
                 .collect::<Vec<String>>()
                 .join(", ");
-            let prompt = format!("Files included: [{}]", files_str);
+            let prompt = format!("{prompt}. Files included: [{files_str}]");
 
             let file = dialoguer::FuzzySelect::new()
                 .highlight_matches(true)

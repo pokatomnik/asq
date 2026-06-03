@@ -80,10 +80,18 @@ impl OpenAILikeProvider {
     }
 
     fn process_llm_response(&self, response: &str) -> anyhow::Result<String> {
-        let template_env = Arc::new(TemplateEnv::new(std::env::current_dir()?));
-        let parser = Parser::try_create(template_env)?;
-        let prompt_str = parser.compile(response)?;
-        Ok(prompt_str)
+        let Ok(current_dir) = std::env::current_dir() else {
+            return Ok(response.to_string());
+        };
+        let template_env = Arc::new(TemplateEnv::new(current_dir));
+        let Ok(parser) = Parser::try_create(template_env) else {
+            return Ok(response.to_string());
+        };
+        let Ok(llm_response_processed) = parser.compile(response) else {
+            return Ok(response.to_string());
+        };
+
+        Ok(llm_response_processed)
     }
 }
 
