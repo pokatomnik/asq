@@ -1,6 +1,6 @@
 use crate::services::pipe_processor::pipe_operator::PipeOperator;
 
-pub(crate) struct Lowercase {}
+pub(crate) struct Lowercase;
 
 impl Lowercase {
     pub fn new() -> Self {
