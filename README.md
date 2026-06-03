@@ -1,4 +1,3 @@
-````markdown
 # 🚀 asq - Quick LLM Asker
 
 ## 🤷 What is this?
@@ -37,7 +36,6 @@ It's like having ChatGPT in your command line – but cooler, because it's writt
 ```bash
 asq onboard
 ```
-````
 
 This will ask you for:
 
@@ -113,5 +111,5 @@ Available operators: `input`, `editor`, `file`, `fetch`, `lowercase`, `select`, 
 
 ## 📄 License
 
-This project is licensed under the **MIT License**.  
+This project is licensed under the **MIT License**.
 Feel free to use, modify, and share it – just don't blame us if your AI goes rogue 🤖.
