@@ -10,6 +10,7 @@ use crate::entities::consts::DEFAULT_TIMEOUT;
 use crate::entities::message::Message;
 use crate::entities::proxy::LLMProxy;
 use crate::entities::role::Role;
+use crate::entities::temperature::Temperature;
 use crate::services::parser::Parser;
 use crate::services::template_env::TemplateEnv;
 use crate::utils::client_builder_ext::ClientBuilderExt;
@@ -38,8 +39,11 @@ pub(crate) struct OpenAILikeProvider {
     #[serde(rename = "proxy")]
     proxy: Option<LLMProxy>,
 
+    #[serde(rename = "temperature")]
+    temperature: Option<Temperature>,
+
     #[serde(skip)]
-    tokens_used: OnceLock<Arc<Mutex<HashSet<String>>>>,
+    api_tokens_used: OnceLock<Arc<Mutex<HashSet<String>>>>,
 }
 
 impl OpenAILikeProvider {
@@ -49,6 +53,7 @@ impl OpenAILikeProvider {
         auth_token_env_key: Option<impl Into<String>>,
         model: impl Into<String>,
         proxy: Option<LLMProxy>,
+        temperature: Option<Temperature>,
     ) -> Self {
         Self {
             name: name.into(),
@@ -57,7 +62,8 @@ impl OpenAILikeProvider {
             model: model.into(),
             proxy,
             auth_token: Default::default(),
-            tokens_used: Default::default(),
+            api_tokens_used: Default::default(),
+            temperature: temperature,
         }
     }
 
@@ -85,7 +91,10 @@ impl OpenAILikeProvider {
             .split(",")
             .map(|v| v.trim().to_owned())
             .collect::<Vec<String>>();
-        let tokens_used = self.tokens_used.get_or_init(|| Arc::default()).to_owned();
+        let tokens_used = self
+            .api_tokens_used
+            .get_or_init(|| Arc::default())
+            .to_owned();
         let Ok(mut tokens_used) = tokens_used.lock() else {
             anyhow::bail!("Failed to lock used tokens");
         };
@@ -104,6 +113,10 @@ impl OpenAILikeProvider {
 
     pub fn model(&self) -> &str {
         &self.model
+    }
+
+    pub fn temperature(&self) -> Temperature {
+        self.temperature.unwrap_or_default()
     }
 
     pub fn proxy(&self) -> Option<&LLMProxy> {
@@ -130,6 +143,7 @@ impl LLMProvider for OpenAILikeProvider {
     fn ask(&self, prompt: impl AsRef<str>, history: Vec<Message>) -> anyhow::Result<LLMAnswer> {
         let model = self.model();
         let prompt = prompt.as_ref();
+        let temperature: f32 = self.temperature().into();
 
         let mut messages = history
             .iter()
@@ -138,7 +152,7 @@ impl LLMProvider for OpenAILikeProvider {
 
         messages.push(LLMProviderMessage::new(Role::User, prompt));
 
-        let body = LLMProviderRequestBody::new(model, messages, false);
+        let body = LLMProviderRequestBody::new(model, messages, temperature, false);
 
         let body_json_str = serde_json::to_string(&body)?;
 
@@ -278,6 +292,41 @@ pub(crate) fn ask_token_key(required: bool) -> anyhow::Result<Option<String>> {
     Ok(Some(token))
 }
 
+pub(crate) fn ask_temperature() -> Option<Temperature> {
+    let confirmed = dialoguer::Confirm::new()
+        .with_prompt("Specify temperature?")
+        .default(false)
+        .show_default(true)
+        .report(false)
+        .interact()
+        .unwrap_or_default();
+
+    if !confirmed {
+        return None;
+    }
+
+    let options = vec![
+        Temperature::Deterministic,
+        Temperature::Strict,
+        Temperature::Explaining,
+        Temperature::Converastion,
+        Temperature::Creative,
+    ];
+
+    let idx = dialoguer::FuzzySelect::new()
+        .with_prompt("Specify response temperature")
+        .items(&options)
+        .default(0)
+        .highlight_matches(true)
+        .report(false)
+        .clear(true)
+        .interact()
+        .unwrap_or(0);
+    let selected_temperature = options.get(idx).map(ToOwned::to_owned).unwrap_or_default();
+
+    Some(selected_temperature)
+}
+
 pub(crate) fn ask_model(
     endpoint_url: impl AsRef<str>,
     token: Option<&str>,
@@ -370,7 +419,8 @@ impl Describe for OpenAILikeProvider {
             .auth_token_env_key
             .clone()
             .unwrap_or("Not set".to_string());
-        result.push_str(format!("Auth token env key: {auth_token_env_key}\n",).as_str());
+        result.push_str(format!("Auth token env key: {auth_token_env_key}\n").as_str());
+        result.push_str(format!("Model temperature: {}\n", self.temperature()).as_str());
         let proxy = self
             .proxy()
             .map(|p| p.proxy_scheme().to_string())
@@ -428,18 +478,23 @@ pub(crate) struct LLMProviderRequestBody {
 
     #[serde(rename = "stream")]
     stream: bool,
+
+    #[serde(rename = "temperature")]
+    temperature: f32,
 }
 
 impl LLMProviderRequestBody {
     pub fn new(
         model: &str,
         messages: impl IntoIterator<Item = LLMProviderMessage>,
+        temperature: f32,
         stream: bool,
     ) -> Self {
         Self {
             model: model.to_string(),
             messages: messages.into_iter().collect(),
             stream,
+            temperature,
         }
     }
 }

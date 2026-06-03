@@ -1,6 +1,8 @@
 use crate::{
     entities::proxy::LLMProxy,
-    providers::openai_like_provider::{OpenAILikeProvider, ask_model, ask_name, ask_token_key},
+    providers::openai_like_provider::{
+        OpenAILikeProvider, ask_model, ask_name, ask_temperature, ask_token_key,
+    },
     utils::init_interactive::InitInteractive,
 };
 
@@ -15,8 +17,10 @@ pub(crate) fn init_openrouter() -> anyhow::Result<OpenAILikeProvider> {
     }
     let proxy_scheme = Option::<LLMProxy>::init_interactive()?;
     let model = ask_model(API_URL, token.as_deref(), proxy_scheme.clone())?;
+    let temperature = ask_temperature();
 
-    let provider = OpenAILikeProvider::new(name, API_URL, token_key, model, proxy_scheme);
+    let provider =
+        OpenAILikeProvider::new(name, API_URL, token_key, model, proxy_scheme, temperature);
 
     Ok(provider)
 }

@@ -2,6 +2,7 @@ use crate::entities::proxy::LLMProxy;
 use crate::providers::openai_like_provider::OpenAILikeProvider;
 use crate::providers::openai_like_provider::ask_model;
 use crate::providers::openai_like_provider::ask_name;
+use crate::providers::openai_like_provider::ask_temperature;
 use crate::providers::openai_like_provider::ask_token_key;
 use crate::utils::init_interactive::InitInteractive;
 
@@ -17,7 +18,9 @@ pub(crate) fn init_gemini() -> anyhow::Result<OpenAILikeProvider> {
 
     let proxy_scheme = Option::<LLMProxy>::init_interactive()?;
     let model = ask_model(API_URL, token.as_deref(), proxy_scheme.clone())?;
-    let provider = OpenAILikeProvider::new(name, API_URL, token_key, model, proxy_scheme);
+    let temperature = ask_temperature();
+    let provider =
+        OpenAILikeProvider::new(name, API_URL, token_key, model, proxy_scheme, temperature);
 
     Ok(provider)
 }

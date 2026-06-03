@@ -4,3 +4,4 @@ pub(crate) mod message;
 pub(crate) mod proxy;
 pub(crate) mod role;
 pub(crate) mod system_prompt;
+pub(crate) mod temperature;
