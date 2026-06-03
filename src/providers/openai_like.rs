@@ -3,6 +3,7 @@ use crate::providers::openai_like_provider::OpenAILikeProvider;
 use crate::providers::openai_like_provider::ask_endpoint_url;
 use crate::providers::openai_like_provider::ask_model;
 use crate::providers::openai_like_provider::ask_name;
+use crate::providers::openai_like_provider::ask_temperature;
 use crate::providers::openai_like_provider::ask_token_key;
 use crate::utils::init_interactive::InitInteractive;
 
@@ -22,9 +23,16 @@ pub(crate) fn init_openai_like() -> anyhow::Result<OpenAILikeProvider> {
         token.as_deref(),
         proxy_scheme.clone(),
     )?;
+    let temperature = ask_temperature();
 
-    let provider =
-        OpenAILikeProvider::new(name, endpoint_url.as_str(), token_key, model, proxy_scheme);
+    let provider = OpenAILikeProvider::new(
+        name,
+        endpoint_url.as_str(),
+        token_key,
+        model,
+        proxy_scheme,
+        temperature,
+    );
 
     Ok(provider)
 }
