@@ -9,7 +9,7 @@ It's like having ChatGPT in your command line – but cooler, because it's writt
 
 - Get quick answers from LLMs without leaving the terminal.
 - Manage multiple LLM providers (OpenAI, Gemini, DeepSeek, NVidia, any OpenAI-compatible endpoint).
-- Use **smart prompts** with built-in pipe operators like `{{ input | file | lowercase }}` to fetch data, edit text, pick files, and more.
+- Use **smart prompts** with built-in pipe operators like `input`, `file`, `lowercase` to fetch data, edit text, pick files, and more.
 - Keep your conversations with **chat history** and **long-term memory** (yes, it remembers stuff!).
 - Perfect for developers who want to integrate LLM queries into scripts or workflows.
 
@@ -107,7 +107,68 @@ Now, please explain the architecture.
 Also, check this URL: {{ "https://example.com" | fetch | htm2text }}
 ```
 
-Available operators: `input`, `editor`, `file`, `fetch`, `lowercase`, `select`, `multiselect`, `password`, `file_picker`, `files_picker`, `htm2text`, `remember`.
+Available operators: `input`, `editor`, `file`, `fetch`, `lowercase`, `select`, `multiselect`, `password`, `file_picker`, `files_picker`, `htm2text`, `remember`, `now`.
+
+## Shell completions
+
+`asq` can generate shell completion scripts for supported shells.  
+To enable completions, add the following line to your shell startup file:
+
+```sh
+source <(asq completions -s SHELL)
+```
+
+Replace SHELL with one of the supported shells:
+
+- `bash`
+- `zsh`
+- `fish`
+- `elvish`
+- `powershell`
+
+### Examples:
+
+#### Bash:
+
+Add this line to `~/.bashrc`:
+
+```sh
+source <(asq completions -s bash)
+```
+
+#### Zsh
+
+Add this line to `~/.zshrc`:
+
+```sh
+source <(asq completions -s zsh)
+```
+
+#### Fish
+
+Add this line to your Fish config file, usually ~/.config/fish/config.fish:
+
+```sh
+source (asq completions -s fish | psub)
+```
+
+#### Elvish
+
+Add this line to your Elvish config file, usually ~/.config/elvish/rc.elv:
+
+```sh
+eval (asq completions -s elvish | slurp)
+```
+
+#### PowerShell
+
+Add the generated script to your PowerShell profile:
+
+```sh
+asq completions -s powershell | Out-String | Invoke-Expression
+```
+
+You can place this command in your PowerShell profile file so that completions are loaded automatically in every session.
 
 ## 📄 License
 

@@ -1,3 +1,4 @@
+pub(crate) mod completions;
 pub(crate) mod controller;
 pub(crate) mod index;
 pub(crate) mod memories_add;
