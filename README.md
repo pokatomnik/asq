@@ -1,5 +1,7 @@
 # 🚀 asq - Quick LLM Asker
 
+[![Rust](https://github.com/pokatomnik/asq/actions/workflows/rust.yml/badge.svg)](https://github.com/pokatomnik/asq/actions/workflows/rust.yml)
+
 ## 🤷 What is this?
 
 **asq** is a blazingly fast CLI tool to ask questions to Large Language Models (LLMs) right from your terminal.  
