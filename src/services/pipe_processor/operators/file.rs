@@ -1,8 +1,9 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::services::{
-    parser::Parser, pipe_processor::pipe_operator::PipeOperator, template_env::TemplateEnv,
-};
+use crate::services::parser::Parser;
+use crate::services::pipe_processor::pipe_operator::PipeOperator;
+use crate::services::pipe_processor_presets::user_pipe_processor;
+use crate::services::template_env::TemplateEnv;
 
 pub(crate) struct File {
     template_env: Arc<TemplateEnv>,
@@ -43,7 +44,8 @@ impl PipeOperator for File {
         }
 
         let template_env = Arc::new(TemplateEnv::new(required_path));
-        let parser = Parser::try_create(template_env)?;
+        let pipe_processor = user_pipe_processor(template_env)?;
+        let parser = Parser::create(pipe_processor);
         let prompt_str = parser.compile(template_contents)?;
 
         Ok(prompt_str)
