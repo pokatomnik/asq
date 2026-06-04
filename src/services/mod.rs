@@ -4,4 +4,5 @@ pub(crate) mod history;
 pub(crate) mod memory;
 pub(crate) mod parser;
 pub(crate) mod pipe_processor;
+pub(crate) mod pipe_processor_presets;
 pub(crate) mod template_env;

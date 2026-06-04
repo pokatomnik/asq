@@ -13,6 +13,7 @@ use crate::providers::openai_like_provider::LLMProvider;
 use crate::services::config::Config;
 use crate::services::history::History;
 use crate::services::parser::Parser;
+use crate::services::pipe_processor_presets::user_pipe_processor;
 use crate::services::template_env::TemplateEnv;
 use crate::utils::file_picker::FilePicker;
 use crate::utils::with_spinner::with_spinner;
@@ -133,7 +134,8 @@ impl IndexController {
             false => {
                 let (prompt_path, contents) = Self::select_template(&config)?;
                 let template_env = Arc::new(TemplateEnv::new(&prompt_path));
-                let parser = Parser::try_create(template_env)?;
+                let pipe_processor = user_pipe_processor(template_env)?;
+                let parser = Parser::create(pipe_processor);
                 let prompt_str = parser.compile(&contents)?;
                 prompt_str
             }

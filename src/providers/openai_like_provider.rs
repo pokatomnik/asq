@@ -12,7 +12,7 @@ use crate::entities::proxy::LLMProxy;
 use crate::entities::role::Role;
 use crate::entities::temperature::Temperature;
 use crate::services::parser::Parser;
-use crate::services::template_env::TemplateEnv;
+use crate::services::pipe_processor_presets::llm_pipe_processor;
 use crate::utils::client_builder_ext::ClientBuilderExt;
 use crate::utils::describe::Describe;
 use crate::utils::random_item::RandomItem;
@@ -124,13 +124,8 @@ impl OpenAILikeProvider {
     }
 
     fn process_llm_response(&self, response: &str) -> anyhow::Result<String> {
-        let Ok(current_dir) = std::env::current_dir() else {
-            return Ok(response.to_string());
-        };
-        let template_env = Arc::new(TemplateEnv::new(current_dir));
-        let Ok(parser) = Parser::try_create(template_env) else {
-            return Ok(response.to_string());
-        };
+        let pipe_processor = llm_pipe_processor()?;
+        let parser = Parser::create(pipe_processor);
         let Ok(llm_response_processed) = parser.compile(response) else {
             return Ok(response.to_string());
         };

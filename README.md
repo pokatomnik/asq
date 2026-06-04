@@ -24,7 +24,6 @@ It's like having ChatGPT in your command line – but cooler, because it's writt
 | **dom_smoothie**       | Extracts readable content from HTML (useful for web article summarization) |
 | **serde / serde_json** | JSON serialization for config and API responses                            |
 | **spinners**           | Show a spinner while waiting for the LLM to respond                        |
-| **open**               | Opens files in browser/editor                                              |
 | **urlencoding**        | URL encoding for queries                                                   |
 | **ignore**             | File walking with gitignore patterns                                       |
 | **marcli**             | Render Markdown output in terminal                                         |
@@ -101,13 +100,13 @@ Use `{{ ... }}` to embed dynamic content or pipe operators:
 
 ```markdown
 Here are the project files:
-{{ "Select files" | files_picker }}
+{{ "Select files" | file_picker }}
 Now, please explain the architecture.
 
 Also, check this URL: {{ "https://example.com" | fetch | htm2text }}
 ```
 
-Available operators: `input`, `editor`, `file`, `fetch`, `lowercase`, `select`, `multiselect`, `password`, `file_picker`, `files_picker`, `htm2text`, `remember`, `now`.
+Available operators: `input`, `editor`, `file`, `fetch`, `lowercase`, `select`, `multiselect`, `password`, `file_picker`, `htm2text`, `remember`, `now`.
 
 ## Shell completions
 
