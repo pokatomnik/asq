@@ -49,6 +49,13 @@ pub(crate) struct IndexController {
 
     #[arg(long = "output", short = 'o', default_value_t = OutputMode::Markdown, help = "Terminal output type")]
     output: OutputMode,
+
+    #[arg(
+        long = "file",
+        short = 'f',
+        help = "File where output must be written. If specified, writes LLM response to file AND to stdout"
+    )]
+    file: Option<PathBuf>,
 }
 
 impl IndexController {
@@ -106,13 +113,21 @@ impl IndexController {
         Ok(provider.to_owned())
     }
 
-    fn print_markdown(response: impl AsRef<str>) {
-        let output = marcli::render(response.as_ref(), &Default::default());
-        println!("{}", output);
+    fn output(&self, contents: &str) -> anyhow::Result<()> {
+        println!("{}", contents);
+        if let Some(to) = self.file.as_ref() {
+            std::fs::write(to, contents)?;
+        }
+        Ok(())
     }
 
-    fn print_plain(response: impl AsRef<str>) {
-        println!("{}", response.as_ref())
+    fn print_markdown(&self, response: impl AsRef<str>) -> anyhow::Result<()> {
+        let output = marcli::render(response.as_ref(), &Default::default());
+        self.output(format!("{}", output).as_str())
+    }
+
+    fn print_plain(&self, response: impl AsRef<str>) -> anyhow::Result<()> {
+        self.output(format!("{}", response.as_ref()).as_str())
     }
 
     fn ask_text(prompt: &str) -> anyhow::Result<String> {
@@ -172,9 +187,9 @@ impl IndexController {
             config.try_write()?;
 
             match self.output {
-                OutputMode::Markdown => Self::print_markdown(&answer.response()),
-                OutputMode::Plain => Self::print_plain(&answer.response()),
-            }
+                OutputMode::Markdown => self.print_markdown(&answer.response()),
+                OutputMode::Plain => self.print_plain(&answer.response()),
+            }?;
 
             Ok(messages)
         })?;
