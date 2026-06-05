@@ -1,9 +1,8 @@
 use clap::Subcommand;
 
-use crate::controllers::{
-    memories_add::MemoriesAddController, memories_delete::MemoriesDeleteController,
-    memories_list::MemoriesListController,
-};
+use crate::controllers::memories_add::MemoriesAddController;
+use crate::controllers::memories_delete::MemoriesDeleteController;
+use crate::controllers::memories_list::MemoriesListController;
 
 #[derive(Subcommand)]
 pub(crate) enum MemoriesActions {
