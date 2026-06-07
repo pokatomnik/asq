@@ -13,8 +13,8 @@ pub(crate) enum Role {
     #[serde(rename = "system")]
     System,
 
-    #[serde(rename = "tools")]
-    Tools,
+    #[serde(rename = "tool")]
+    Tool,
 }
 
 impl Display for Role {
@@ -23,7 +23,7 @@ impl Display for Role {
             Role::User => f.write_str("user"),
             Role::Assistant => f.write_str("assistant"),
             Role::System => f.write_str("system"),
-            Role::Tools => f.write_str("tools"),
+            Role::Tool => f.write_str("tool"),
         }
     }
 }
