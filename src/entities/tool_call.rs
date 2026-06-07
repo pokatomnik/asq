@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct ToolCall {
@@ -12,6 +13,9 @@ pub(crate) struct ToolCall {
 
     #[serde(rename = "function")]
     function: Option<ToolCallFunction>,
+
+    #[serde(rename = "extra_content", skip_serializing_if = "Option::is_none")]
+    extra_content: Option<Value>,
 }
 
 impl ToolCall {
