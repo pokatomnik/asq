@@ -7,9 +7,7 @@ use clap::{Args, ValueEnum};
 use crate::controllers::controller::Controller;
 use crate::controllers::onboard::OnboardController;
 use crate::entities::llm_provider_kind::LLMProviderKind;
-use crate::entities::message::Message;
-use crate::entities::role::Role;
-use crate::providers::openai_like_provider::LLMProvider;
+use crate::providers::openai_like_provider::{LLMAnswer, LLMProvider};
 use crate::services::config::Config;
 use crate::services::history::History;
 use crate::services::parser::Parser;
@@ -121,13 +119,15 @@ impl IndexController {
         Ok(())
     }
 
-    fn print_markdown(&self, response: impl AsRef<str>) -> anyhow::Result<()> {
+    fn print_markdown(&self, answer: &LLMAnswer) -> anyhow::Result<()> {
+        let response = answer.response();
         let output = marcli::render(response.as_ref(), &Default::default());
-        self.output(format!("{}", output).as_str())
+        self.output(output.as_str())
     }
 
-    fn print_plain(&self, response: impl AsRef<str>) -> anyhow::Result<()> {
-        self.output(format!("{}", response.as_ref()).as_str())
+    fn print_plain(&self, answer: &LLMAnswer) -> anyhow::Result<()> {
+        let response = answer.response();
+        self.output(response)
     }
 
     fn ask_text(prompt: &str) -> anyhow::Result<String> {
@@ -179,19 +179,17 @@ impl IndexController {
                 },
             )?;
 
-            let mut messages = messages;
-            messages.push(Message::new(Role::User, &prompt_text));
-            messages.push(Message::new(Role::Assistant, answer.response()));
+            let updated_messages = answer.messages().to_vec();
 
             config.set_last_used_provider(Some(provider));
             config.try_write()?;
 
             match self.output {
-                OutputMode::Markdown => self.print_markdown(&answer.response()),
-                OutputMode::Plain => self.print_plain(&answer.response()),
+                OutputMode::Markdown => self.print_markdown(&answer),
+                OutputMode::Plain => self.print_plain(&answer),
             }?;
 
-            Ok(messages)
+            Ok(updated_messages)
         })?;
 
         Ok(())

@@ -1,21 +1,22 @@
-use std::collections::HashSet;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, OnceLock};
 use std::{cell::OnceCell, fmt::Display};
 
 use reqwest::blocking::Response;
 use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::entities::consts::DEFAULT_TIMEOUT;
 use crate::entities::message::Message;
 use crate::entities::proxy::LLMProxy;
 use crate::entities::role::Role;
 use crate::entities::temperature::Temperature;
+use crate::entities::tool_call::ToolCall;
 use crate::services::parser::Parser;
 use crate::services::pipe_processor_presets::llm_pipe_processor;
+use crate::tools::tools_registry::ToolsRegistry;
 use crate::utils::client_builder_ext::ClientBuilderExt;
 use crate::utils::describe::Describe;
-use crate::utils::random_item::RandomItem;
 use crate::utils::request_builder_ext::RequestBuilderExt;
 use crate::utils::with_spinner::with_spinner;
 
@@ -43,7 +44,7 @@ pub(crate) struct OpenAILikeProvider {
     temperature: Option<Temperature>,
 
     #[serde(skip)]
-    api_tokens_used: OnceLock<Arc<Mutex<HashSet<String>>>>,
+    tools_registry: OnceLock<Arc<ToolsRegistry>>,
 }
 
 impl OpenAILikeProvider {
@@ -62,8 +63,8 @@ impl OpenAILikeProvider {
             model: model.into(),
             proxy,
             auth_token: Default::default(),
-            api_tokens_used: Default::default(),
             temperature: temperature,
+            tools_registry: Default::default(),
         }
     }
 
@@ -75,40 +76,17 @@ impl OpenAILikeProvider {
         &self.endpoint_url
     }
 
-    pub fn auth_token(&self) -> anyhow::Result<Option<String>> {
-        let Some(env_key) = self.auth_token_env_key.as_deref() else {
-            return Ok(None);
-        };
-        let Some(tokens_from_env) = self
-            .auth_token
+    pub fn tools_registry<'a>(&'a self) -> &'a ToolsRegistry {
+        self.tools_registry
+            .get_or_init(|| Arc::new(ToolsRegistry::new()))
+    }
+
+    pub fn auth_token(&self) -> Option<&str> {
+        let env_key = self.auth_token_env_key.as_deref()?;
+        self.auth_token
             .get_or_init(|| std::env::var(env_key).ok())
             .as_ref()
-            .map(|v| v.to_owned())
-        else {
-            return Ok(None);
-        };
-        let tokens_list = tokens_from_env
-            .split(",")
-            .map(|v| v.trim().to_owned())
-            .collect::<Vec<String>>();
-        let tokens_used = self
-            .api_tokens_used
-            .get_or_init(|| Arc::default())
-            .to_owned();
-        let Ok(mut tokens_used) = tokens_used.lock() else {
-            anyhow::bail!("Failed to lock used tokens");
-        };
-
-        while tokens_used.len() != tokens_list.len() {
-            if let Some(random_token) = tokens_list.random()
-                && !tokens_used.contains(random_token)
-            {
-                tokens_used.insert(random_token.to_string());
-                return Ok(Some(random_token.to_string()));
-            }
-        }
-
-        anyhow::bail!("All tokens used")
+            .map(|v| v.as_str())
     }
 
     pub fn model(&self) -> &str {
@@ -132,22 +110,51 @@ impl OpenAILikeProvider {
 
         Ok(llm_response_processed)
     }
-}
 
-impl LLMProvider for OpenAILikeProvider {
-    fn ask(&self, prompt: impl AsRef<str>, history: Vec<Message>) -> anyhow::Result<LLMAnswer> {
-        let model = self.model();
-        let prompt = prompt.as_ref();
+    fn process_tools(&self, tool_calls: &[ToolCall]) -> Vec<Message> {
+        let mut results = Vec::with_capacity(tool_calls.len());
+        let tools = self.tools_registry();
+
+        for tool_call in tool_calls.iter() {
+            let Some(function) = tool_call.function() else {
+                continue;
+            };
+
+            let (tool_call_result, tool_call_errors) =
+                tools.call_tool(function.name(), function.arguments());
+            let mut res = Vec::new();
+            res.extend(tool_call_result.iter());
+            res.extend(tool_call_errors.iter());
+            let as_str = res
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<String>>()
+                .join("\n");
+            let message =
+                Message::new(Role::Tool, &as_str).with_tool_call_id(tool_call.id().to_string());
+            results.push(message);
+        }
+
+        results
+    }
+
+    fn send_chat_completion(
+        &self,
+        history: &[Message],
+    ) -> anyhow::Result<OpenAILikeProviderGenerateResponse> {
         let temperature: f32 = self.temperature().into();
-
-        let mut messages = history
+        let messages = history
             .iter()
-            .map(|m| LLMProviderMessage::new(*m.role(), m.contents()))
+            .map(LLMProviderMessage::from)
             .collect::<Vec<LLMProviderMessage>>();
 
-        messages.push(LLMProviderMessage::new(Role::User, prompt));
-
-        let body = LLMProviderRequestBody::new(model, messages, temperature, false);
+        let body = LLMProviderRequestBody::new(
+            self.model(),
+            messages,
+            ToolsRegistry::tool_definitions()?,
+            temperature,
+            false,
+        );
 
         let body_json_str = serde_json::to_string(&body)?;
 
@@ -156,7 +163,7 @@ impl LLMProvider for OpenAILikeProvider {
             .with_optional_proxy(self.proxy().as_ref())
             .build()?;
 
-        let token = self.auth_token()?;
+        let token = self.auth_token();
         let url = format!(
             "{}/chat/completions",
             self.endpoint_url.trim().trim_matches('/')
@@ -169,42 +176,69 @@ impl LLMProvider for OpenAILikeProvider {
         let response = request_builder.body(body_json_str).send()?;
 
         if response.status() == StatusCode::TOO_MANY_REQUESTS {
-            return self.ask(prompt, history);
+            return self.send_chat_completion(history);
         }
 
         if response.status() != StatusCode::OK {
+            let status = response.status();
+            let error_text = response.text().unwrap_or_default();
             anyhow::bail!(format!(
-                "Server responded with status: {}",
-                response.status()
+                "Server responded with status: {status}, text: {error_text}"
             ))
         }
 
         let result: OpenAILikeProviderGenerateResponse = response.text()?.try_into()?;
 
-        let llm_response_message = result
-            .choices
-            .get(0)
-            .ok_or_else(|| anyhow::Error::msg("No response from model"))?;
+        Ok(result)
+    }
+}
 
-        if llm_response_message.finish_reason
-            != OpenAILikeProviderGenerateResponseFinishReason::Stop
-        {
-            anyhow::bail!(
-                "Unexpected LLM response: {}",
-                llm_response_message.finish_reason
-            );
+impl LLMProvider for OpenAILikeProvider {
+    fn ask(&self, prompt: impl AsRef<str>, mut history: Vec<Message>) -> anyhow::Result<LLMAnswer> {
+        const MAX_TOOL_ITERATIONS: usize = 8;
+
+        history.push(Message::new(Role::User, prompt.as_ref()));
+
+        for _ in 0..MAX_TOOL_ITERATIONS {
+            let result = self.send_chat_completion(&history)?;
+            let llm_response_choice = result
+                .choices
+                .into_iter()
+                .next()
+                .ok_or_else(|| anyhow::Error::msg("No response from model"))?;
+
+            let llm_response_message = llm_response_choice.message;
+            if llm_response_message.role != Role::Assistant {
+                anyhow::bail!(
+                    "Unexpected LLM response role: {}",
+                    llm_response_message.role
+                );
+            }
+
+            match llm_response_choice.finish_reason {
+                OpenAILikeProviderGenerateResponseFinishReason::Stop => {
+                    let llm_response_str = llm_response_message.content.unwrap_or_default();
+                    let processed_result = self.process_llm_response(llm_response_str.as_str())?;
+                    history.push(Message::new(Role::Assistant, processed_result.as_str()));
+                    return Ok(LLMAnswer::new(processed_result.as_str(), history));
+                }
+                OpenAILikeProviderGenerateResponseFinishReason::ToolCalls => {
+                    let tool_calls = llm_response_message.tool_calls.unwrap_or_default();
+                    if tool_calls.is_empty() {
+                        anyhow::bail!("LLM requested tool calls but returned no tool calls");
+                    }
+
+                    history.push(Message::assistant_tool_call(
+                        llm_response_message.content,
+                        tool_calls.clone(),
+                    ));
+                    history.extend(self.process_tools(&tool_calls));
+                }
+                unexpected => anyhow::bail!("Unexpected LLM response: {unexpected}"),
+            }
         }
 
-        if llm_response_message.message.role != Role::Assistant {
-            anyhow::bail!(
-                "Unexpected LLM response role: {}",
-                llm_response_message.message.role
-            );
-        }
-
-        let processed_result =
-            self.process_llm_response(llm_response_message.message.content.as_str())?;
-        Ok(LLMAnswer::new(processed_result.as_str()))
+        anyhow::bail!("Too many consecutive tool calls from LLM")
     }
 }
 
@@ -369,7 +403,10 @@ struct OpenAILikeProviderGenerateResponseMessage {
     role: Role,
 
     #[serde(rename = "content")]
-    content: String,
+    content: Option<String>,
+
+    #[serde(rename = "tool_calls")]
+    tool_calls: Option<Vec<ToolCall>>,
 }
 
 #[derive(serde::Deserialize, Clone, Copy, PartialEq, PartialOrd)]
@@ -450,15 +487,37 @@ pub(crate) struct LLMProviderMessage {
     #[serde(rename = "role")]
     role: Role,
 
-    #[serde(rename = "content")]
-    content: String,
+    #[serde(rename = "content", skip_serializing_if = "Option::is_none")]
+    content: Option<String>,
+
+    #[serde(rename = "tool_call_id", skip_serializing_if = "Option::is_none")]
+    tool_call_id: Option<String>,
+
+    #[serde(rename = "tool_calls", skip_serializing_if = "Option::is_none")]
+    tool_calls: Option<Vec<ToolCall>>,
 }
 
-impl LLMProviderMessage {
-    pub fn new(role: Role, content: &str) -> Self {
+impl From<&Message> for LLMProviderMessage {
+    fn from(value: &Message) -> Self {
         Self {
-            role,
-            content: content.to_string(),
+            role: *value.role(),
+            content: value.content().map(ToString::to_string),
+            tool_call_id: value.tool_call_id().map(ToString::to_string),
+            tool_calls: value.tool_calls().map(ToOwned::to_owned),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+enum ToolChoice {
+    #[serde(rename = "auto")]
+    Auto,
+}
+
+impl Display for ToolChoice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ToolChoice::Auto => f.write_str("auto"),
         }
     }
 }
@@ -476,18 +535,27 @@ pub(crate) struct LLMProviderRequestBody {
 
     #[serde(rename = "temperature")]
     temperature: f32,
+
+    #[serde(rename = "tools")]
+    tools: Vec<Value>,
+
+    #[serde(rename = "tool_choice")]
+    tool_choice: ToolChoice,
 }
 
 impl LLMProviderRequestBody {
     pub fn new(
         model: &str,
         messages: impl IntoIterator<Item = LLMProviderMessage>,
+        tools: Vec<Value>,
         temperature: f32,
         stream: bool,
     ) -> Self {
         Self {
             model: model.to_string(),
             messages: messages.into_iter().collect(),
+            tools: tools,
+            tool_choice: ToolChoice::Auto,
             stream,
             temperature,
         }
@@ -496,17 +564,23 @@ impl LLMProviderRequestBody {
 
 pub(crate) struct LLMAnswer {
     response: String,
+    messages: Vec<Message>,
 }
 
 impl LLMAnswer {
-    pub fn new(response: &str) -> Self {
+    pub fn new(response: &str, messages: Vec<Message>) -> Self {
         Self {
             response: response.to_string(),
+            messages,
         }
     }
 
     pub fn response(&self) -> &str {
         &self.response
+    }
+
+    pub fn messages(&self) -> &[Message] {
+        &self.messages
     }
 }
 
