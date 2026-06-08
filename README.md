@@ -12,7 +12,7 @@ It's like having ChatGPT in your command line – but cooler, because it's writt
 - Get quick answers from LLMs without leaving the terminal.
 - Manage multiple LLM providers (OpenAI, Gemini, DeepSeek, NVidia, any OpenAI-compatible endpoint).
 - Use **smart prompts** with built-in pipe operators like `input`, `file`, `lowercase` to fetch data, edit text, pick files, and more.
-- Keep your conversations with **chat history** and **long-term memory** (yes, it remembers stuff!).
+- Keep your conversations with **chat history** and **long-term memory** (yes, it remembers stuff!). Just ask your LLM to remember something and It will.
 - Perfect for developers who want to integrate LLM queries into scripts or workflows.
 
 ## 🛠️ Tech Stack
@@ -108,7 +108,7 @@ Now, please explain the architecture.
 Also, check this URL: {{ "https://example.com" | fetch | htm2text }}
 ```
 
-Available operators: `input`, `editor`, `file`, `fetch`, `lowercase`, `select`, `multiselect`, `password`, `file_picker`, `htm2text`, `remember`, `now`.
+Available operators: `input`, `editor`, `file`, `fetch`, `lowercase`, `select`, `multiselect`, `password`, `file_picker`, `htm2text`, `now`.
 
 ## Shell completions
 

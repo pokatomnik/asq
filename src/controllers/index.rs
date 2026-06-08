@@ -13,6 +13,7 @@ use crate::services::history::History;
 use crate::services::parser::Parser;
 use crate::services::pipe_processor_presets::user_pipe_processor;
 use crate::services::template_env::TemplateEnv;
+use crate::tools::tools_registry::ToolsRegistry;
 use crate::utils::file_picker::FilePicker;
 use crate::utils::with_spinner::with_spinner;
 
@@ -156,7 +157,10 @@ impl IndexController {
             }
         };
 
-        history.with_history(|messages| {
+        let tools_registry = ToolsRegistry::new();
+        let tools = tools_registry.tools();
+
+        history.with_history(tools, |messages| {
             let answer = with_spinner(
                 "Thinking...",
                 format!("{} answer:", &provider.to_string()),

@@ -2,8 +2,9 @@ use std::sync::OnceLock;
 
 use crate::entities::message::Message;
 use crate::entities::role::Role;
-use crate::entities::system_prompt::SYSTEM_PROMPT;
+use crate::entities::system_prompt::system_prompt;
 use crate::services::memory::Memory;
+use crate::tools::tool::Tool;
 use crate::utils::fileman::FileMan;
 
 pub struct History {
@@ -45,9 +46,9 @@ impl History {
         Ok(())
     }
 
-    fn get_system_prompt(&self) -> anyhow::Result<String> {
+    fn get_system_prompt(&self, tools: &[Box<dyn Tool>]) -> anyhow::Result<String> {
         let memory = Memory::new();
-        let mut result = String::from(SYSTEM_PROMPT);
+        let mut result = system_prompt(tools);
         result.push('\n');
         let memories = memory.to_string();
         result.push_str(memories.as_str());
@@ -57,6 +58,7 @@ impl History {
 
     pub fn with_history(
         &self,
+        tools: &[Box<dyn Tool>],
         doer: impl FnOnce(Vec<Message>) -> anyhow::Result<Vec<Message>>,
     ) -> anyhow::Result<()> {
         let mut messages = match self.use_history {
@@ -66,7 +68,7 @@ impl History {
         if messages.len() == 0 {
             messages = vec![Message::new(
                 Role::System,
-                self.get_system_prompt()?.as_str(),
+                self.get_system_prompt(tools)?.as_str(),
             )]
         }
         let updated_messages = doer(messages)?;

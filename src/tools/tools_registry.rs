@@ -1,36 +1,46 @@
 use serde_json::Value;
 
-use crate::tools::{memory::Memory, tool::Tool};
+use crate::tools::{memory::memory::Memory, tool::Tool};
 
-#[derive(Debug)]
 pub(crate) struct ToolsRegistry {
-    memory: Memory,
+    tools: Vec<Box<dyn Tool>>,
 }
 
 impl ToolsRegistry {
     pub fn new() -> Self {
+        let mut tools = Vec::<Box<dyn Tool>>::with_capacity(1);
+        tools.push(Box::new(Memory::new()));
         Self {
-            memory: Memory::new(),
+            tools: vec![Box::new(Memory::new())],
         }
     }
 
-    fn call_memory(&self, params_raw: &str, results: &mut Vec<String>, errors: &mut Vec<String>) {
-        match self.memory.exec(params_raw) {
-            Ok(result) => results.push(result),
-            Err(e) => errors.push(e.to_string()),
-        }
+    pub fn tools(&self) -> &[Box<dyn Tool>] {
+        &self.tools
     }
 
-    pub fn tool_definitions() -> anyhow::Result<Vec<Value>> {
-        Ok(vec![Memory::definition()?])
+    pub fn tool_definitions(&self) -> anyhow::Result<Vec<Value>> {
+        let definitions = self
+            .tools
+            .iter()
+            .map(|v| v.definition())
+            .filter_map(|d| d.ok())
+            .collect::<Vec<Value>>();
+        Ok(definitions)
     }
 
     pub fn call_tool(&self, name: &str, params_raw: &str) -> (Vec<String>, Vec<String>) {
         let mut results = Vec::with_capacity(1);
         let mut err_descriptions = Vec::with_capacity(1);
 
-        if name == Memory::NAME {
-            self.call_memory(params_raw, &mut results, &mut err_descriptions);
+        for tool in self.tools.iter() {
+            if name != tool.name() {
+                continue;
+            }
+            match tool.exec(params_raw) {
+                Ok(result) => results.push(result),
+                Err(e) => err_descriptions.push(e.to_string()),
+            }
         }
 
         (results, err_descriptions)

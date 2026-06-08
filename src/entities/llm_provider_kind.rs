@@ -5,7 +5,7 @@ use strum_macros::EnumDiscriminants;
 
 use crate::{providers::openai_like_provider::OpenAILikeProvider, utils::describe::Describe};
 
-#[derive(Debug, Clone, Serialize, Deserialize, EnumDiscriminants)]
+#[derive(Clone, Serialize, Deserialize, EnumDiscriminants)]
 #[serde(tag = "kind")]
 #[strum_discriminants(
     name(LLMProviderKindOnly),

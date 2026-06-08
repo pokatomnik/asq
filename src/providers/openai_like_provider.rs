@@ -12,15 +12,13 @@ use crate::entities::proxy::LLMProxy;
 use crate::entities::role::Role;
 use crate::entities::temperature::Temperature;
 use crate::entities::tool_call::ToolCall;
-use crate::services::parser::Parser;
-use crate::services::pipe_processor_presets::llm_pipe_processor;
 use crate::tools::tools_registry::ToolsRegistry;
 use crate::utils::client_builder_ext::ClientBuilderExt;
 use crate::utils::describe::Describe;
 use crate::utils::request_builder_ext::RequestBuilderExt;
 use crate::utils::with_spinner::with_spinner;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct OpenAILikeProvider {
     #[serde(rename = "name")]
     name: String,
@@ -101,16 +99,6 @@ impl OpenAILikeProvider {
         self.proxy.as_ref()
     }
 
-    fn process_llm_response(&self, response: &str) -> anyhow::Result<String> {
-        let pipe_processor = llm_pipe_processor()?;
-        let parser = Parser::create(pipe_processor);
-        let Ok(llm_response_processed) = parser.compile(response) else {
-            return Ok(response.to_string());
-        };
-
-        Ok(llm_response_processed)
-    }
-
     fn process_tools(&self, tool_calls: &[ToolCall]) -> Vec<Message> {
         let mut results = Vec::with_capacity(tool_calls.len());
         let tools = self.tools_registry();
@@ -151,7 +139,7 @@ impl OpenAILikeProvider {
         let body = LLMProviderRequestBody::new(
             self.model(),
             messages,
-            ToolsRegistry::tool_definitions()?,
+            self.tools_registry().tool_definitions()?,
             temperature,
             false,
         );
@@ -218,9 +206,8 @@ impl LLMProvider for OpenAILikeProvider {
             match llm_response_choice.finish_reason {
                 OpenAILikeProviderGenerateResponseFinishReason::Stop => {
                     let llm_response_str = llm_response_message.content.unwrap_or_default();
-                    let processed_result = self.process_llm_response(llm_response_str.as_str())?;
-                    history.push(Message::new(Role::Assistant, processed_result.as_str()));
-                    return Ok(LLMAnswer::new(processed_result.as_str(), history));
+                    history.push(Message::new(Role::Assistant, llm_response_str.as_str()));
+                    return Ok(LLMAnswer::new(llm_response_str.as_str(), history));
                 }
                 OpenAILikeProviderGenerateResponseFinishReason::ToolCalls => {
                     let tool_calls = llm_response_message.tool_calls.unwrap_or_default();

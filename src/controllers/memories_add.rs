@@ -7,11 +7,11 @@ pub(crate) struct MemoriesAddController;
 
 impl Controller for MemoriesAddController {
     fn handle(&self) -> anyhow::Result<()> {
-        let memory_to_save = dialoguer::Input::new()
+        let memory_to_save = dialoguer::Input::<String>::new()
             .with_prompt("What must be saved?")
             .allow_empty(false)
             .interact()?;
-        Memory::add_memory(memory_to_save)?;
+        Memory::add_memory(memory_to_save.as_str())?;
         println!("Memory saved");
         Ok(())
     }
