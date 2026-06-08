@@ -53,9 +53,18 @@ impl Memory {
     }
 
     pub fn add_memory(memory: impl AsRef<str>) -> anyhow::Result<()> {
+        let text = memory.as_ref().to_string();
         let mut memories = Self::get_memos();
+
+        // Prevent duplicates
+        for curr in memories.iter() {
+            if curr.text.as_str() == text.as_str() {
+                return Ok(());
+            }
+        }
+
         memories.push(Memo {
-            text: memory.as_ref().to_string(),
+            text,
             date_added: Self::now(),
         });
         let memos_json = serde_json::to_string_pretty(&memories)?;
