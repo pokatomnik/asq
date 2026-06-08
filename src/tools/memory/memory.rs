@@ -13,11 +13,17 @@ impl Memory {
 }
 
 impl Tool for Memory {
-    const NAME: &'static str = "memory";
+    fn name(&self) -> &'static str {
+        "memory"
+    }
 
-    fn definition() -> anyhow::Result<serde_json::Value> {
+    fn skill(&self) -> &'static str {
+        include_str!("./SKILL.md")
+    }
+
+    fn definition(&self) -> anyhow::Result<serde_json::Value> {
         let tool_definition = TSD::new(
-            Self::NAME,
+            self.name(),
             "Persistent memory tool",
             serde_json::json!({
                 "text": {
@@ -34,7 +40,7 @@ impl Tool for Memory {
 
     fn exec(&self, params: &str) -> anyhow::Result<String> {
         let params = serde_json::from_str::<MemoryParams>(params)?;
-        MemoryService::add_memory(params.text.clone())?;
+        MemoryService::add_memory(params.text.as_str())?;
         Ok(format!("Memory \"{}\" saved", params.text.as_str()))
     }
 }

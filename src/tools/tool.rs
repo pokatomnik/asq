@@ -1,9 +1,11 @@
 use serde_json::Value;
 
 pub(crate) trait Tool {
-    const NAME: &'static str;
+    fn name(&self) -> &'static str;
 
-    fn definition() -> anyhow::Result<Value>;
+    fn skill(&self) -> &'static str;
+
+    fn definition(&self) -> anyhow::Result<Value>;
 
     fn exec(&self, params: &str) -> anyhow::Result<String>;
 }

@@ -13,7 +13,7 @@ use crate::utils::init_interactive::InitInteractive;
 
 static CONFIG_FILE_NAME: &'static str = "asq.json";
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct Config {
     #[serde(rename = "lasUsedProvider")]
     last_used_provider: Option<LLMProviderKind>,

@@ -24,7 +24,7 @@ impl MemoriesDeleteController {
 
 impl Controller for MemoriesDeleteController {
     fn handle(&self) -> anyhow::Result<()> {
-        let memories = Memory::get_memories()?;
+        let memories = Memory::get_memories();
         let indexes_to_remove = self.ask_remove_indexes(memories.as_slice());
         if indexes_to_remove.is_empty() {
             println!("No memories to remove");

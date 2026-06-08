@@ -8,5 +8,4 @@ pub(crate) mod lowercase;
 pub(crate) mod multiselect;
 pub(crate) mod now;
 pub(crate) mod password;
-pub(crate) mod remember;
 pub(crate) mod select;

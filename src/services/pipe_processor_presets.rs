@@ -13,7 +13,6 @@ use crate::services::pipe_processor::operators::lowercase::Lowercase;
 use crate::services::pipe_processor::operators::multiselect::Multiselect;
 use crate::services::pipe_processor::operators::now::Now;
 use crate::services::pipe_processor::operators::password::Password;
-use crate::services::pipe_processor::operators::remember::Remember;
 use crate::services::pipe_processor::operators::select::Select;
 use crate::services::pipe_processor::pipe_processor::PipeProcessor;
 use crate::services::template_env::TemplateEnv;
@@ -47,16 +46,6 @@ pub(crate) fn user_pipe_processor(template_env: Arc<TemplateEnv>) -> anyhow::Res
     pipe_processor.register_operator("password", password)?;
     pipe_processor.register_operator("file_picker", file_picker)?;
     pipe_processor.register_operator("now", now)?;
-
-    Ok(pipe_processor)
-}
-
-pub(crate) fn llm_pipe_processor() -> anyhow::Result<PipeProcessor> {
-    let pipe_processor = PipeProcessor::default();
-
-    let remember = Arc::new(Remember::new());
-
-    pipe_processor.register_operator("remember", remember)?;
 
     Ok(pipe_processor)
 }
