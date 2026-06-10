@@ -9,3 +9,6 @@ pub(crate) mod operators_list;
 pub(crate) mod providers_add;
 pub(crate) mod providers_delete;
 pub(crate) mod providers_list;
+pub(crate) mod skills_delete;
+pub(crate) mod skills_install;
+pub(crate) mod skills_list;

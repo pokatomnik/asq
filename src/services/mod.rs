@@ -5,4 +5,5 @@ pub(crate) mod memory;
 pub(crate) mod parser;
 pub(crate) mod pipe_processor;
 pub(crate) mod pipe_processor_presets;
+pub(crate) mod skills;
 pub(crate) mod template_env;
