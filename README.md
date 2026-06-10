@@ -96,6 +96,26 @@ asq memories delete
 asq operators list
 ```
 
+### Manage skills
+
+- **List** installed skills:
+
+```bash
+asq skills list
+```
+
+- **Install** a new skill from a URL:
+
+```bash
+asq skills install --name skill_name https://skill-url.com/skill/SKILL.md
+```
+
+- **Delete** an existing skill (interactive selection):
+
+```bash
+asq skills delete
+```
+
 ### Prompt template syntax
 
 Use `{{ ... }}` to embed dynamic content or pipe operators:
