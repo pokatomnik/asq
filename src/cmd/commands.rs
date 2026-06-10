@@ -3,6 +3,7 @@ use clap::Subcommand;
 use crate::cmd::memories::MemoriesActions;
 use crate::cmd::operators::OperatorsActions;
 use crate::cmd::providers::ProvidersActions;
+use crate::cmd::skills::SkillsActions;
 use crate::controllers::completions::CompletionsController;
 use crate::controllers::onboard::OnboardController;
 
@@ -18,6 +19,9 @@ pub(crate) enum Commands {
 
     #[command(subcommand)]
     Memories(MemoriesActions),
+
+    #[command(subcommand)]
+    Skills(SkillsActions),
 
     Completions(CompletionsController),
 }

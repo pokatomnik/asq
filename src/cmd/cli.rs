@@ -6,9 +6,9 @@ use clap::Parser;
 #[command(about = "Quick LLM asker")]
 #[command(version)]
 pub(crate) struct Cli {
-    #[command(subcommand)]
-    pub command: Option<Commands>,
-
     #[command(flatten)]
     pub index: IndexController,
+
+    #[command(subcommand)]
+    pub command: Option<Commands>,
 }

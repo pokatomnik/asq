@@ -1,8 +1,10 @@
 use clap::Parser;
 
-use crate::cmd::cli;
 use crate::cmd::commands::Commands::{self, Onboard};
+use crate::cmd::memories::MemoriesActions;
 use crate::cmd::providers::ProvidersActions;
+use crate::cmd::skills::SkillsActions;
+use crate::cmd::{cli, operators};
 use crate::controllers::controller::Controller;
 
 mod cmd;
@@ -26,19 +28,26 @@ fn main() -> anyhow::Result<()> {
                 }
             },
             Commands::Operators(operators_actions) => match operators_actions {
-                cmd::operators::OperatorsActions::List(operators_list_controller) => {
+                operators::OperatorsActions::List(operators_list_controller) => {
                     operators_list_controller.handle()
                 }
             },
             Commands::Memories(memories_actions) => match memories_actions {
-                cmd::memories::MemoriesActions::List(memories_list_controller) => {
+                MemoriesActions::List(memories_list_controller) => {
                     memories_list_controller.handle()
                 }
-                cmd::memories::MemoriesActions::Add(memories_add_controller) => {
-                    memories_add_controller.handle()
-                }
-                cmd::memories::MemoriesActions::Delete(memories_delete_controller) => {
+                MemoriesActions::Add(memories_add_controller) => memories_add_controller.handle(),
+                MemoriesActions::Delete(memories_delete_controller) => {
                     memories_delete_controller.handle()
+                }
+            },
+            Commands::Skills(skills_actions) => match skills_actions {
+                SkillsActions::Install(skills_install_controller) => {
+                    skills_install_controller.handle()
+                }
+                SkillsActions::List(skills_list_controller) => skills_list_controller.handle(),
+                SkillsActions::Delete(skills_delete_controller) => {
+                    skills_delete_controller.handle()
                 }
             },
             Commands::Completions(completions_controller) => completions_controller.handle(),
