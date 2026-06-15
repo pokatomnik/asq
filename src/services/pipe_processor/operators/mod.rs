@@ -4,7 +4,6 @@ pub(crate) mod file;
 pub(crate) mod file_picker;
 pub(crate) mod htm2text;
 pub(crate) mod input;
-pub(crate) mod lowercase;
 pub(crate) mod multiselect;
 pub(crate) mod now;
 pub(crate) mod password;

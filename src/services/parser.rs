@@ -169,10 +169,10 @@ mod tests {
         let pipe_processor = user_pipe_processor(template_env).unwrap();
         let parser = Parser::create(pipe_processor);
         let result = parser
-            .compile("{{ \"SMART ASS\" | lower }} said: fuck you")
+            .compile("{{ \"<p>SMART ASS</p>\" | htm2text }} said: fuck you")
             .unwrap();
 
-        assert_eq!(result, "smart ass said: fuck you");
+        assert_eq!(result, "SMART ASS said: fuck you");
     }
 
     #[test]
@@ -180,9 +180,11 @@ mod tests {
         let template_env = Arc::new(TemplateEnv::new(PathBuf::default()));
         let pipe_processor = user_pipe_processor(template_env).unwrap();
         let parser = Parser::create(pipe_processor);
-        let result = parser.compile("hello, {{ WORLD | lower }}").unwrap();
+        let result = parser
+            .compile("hello, {{ \"<p>WORLD</p>\" | htm2text }}")
+            .unwrap();
 
-        assert_eq!(result, "hello, world")
+        assert_eq!(result, "hello, WORLD")
     }
 
     #[test]
@@ -191,9 +193,9 @@ mod tests {
         let pipe_processor = user_pipe_processor(template_env).unwrap();
         let parser = Parser::create(pipe_processor);
         let result = parser
-            .compile("Hi, this is {{ SHIT | lower }} around here")
+            .compile("Hi, this is {{ \"<p>SHIT</p>\" | htm2text }} around here")
             .unwrap();
-        assert_eq!(result, "Hi, this is shit around here");
+        assert_eq!(result, "Hi, this is SHIT around here");
     }
 
     #[test]
@@ -201,7 +203,7 @@ mod tests {
         let template_env = Arc::new(TemplateEnv::new(PathBuf::default()));
         let pipe_processor = user_pipe_processor(template_env).unwrap();
         let parser = Parser::create(pipe_processor);
-        let result = parser.compile("Hi, this is {{ { SHIT | lower }} around here");
+        let result = parser.compile("Hi, this is {{ { SHIT | htm2text }} around here");
         assert_eq!(result.is_err(), true)
     }
 
@@ -210,7 +212,7 @@ mod tests {
         let template_env = Arc::new(TemplateEnv::new(PathBuf::default()));
         let pipe_processor = user_pipe_processor(template_env).unwrap();
         let parser = Parser::create(pipe_processor);
-        let result = parser.compile("Hi, this is {{ SHIT | lower {{ WTF }} }} around here");
+        let result = parser.compile("Hi, this is {{ SHIT | htm2text {{ WTF }} }} around here");
         assert_eq!(result.is_err(), true)
     }
 
@@ -220,8 +222,8 @@ mod tests {
         let pipe_processor = user_pipe_processor(template_env).unwrap();
         let parser = Parser::create(pipe_processor);
         let result = parser
-            .compile("Hi, this is {{SHIT|lower}} around here")
+            .compile("Hi, this is {{ \"<p>SHIT</p>\"|htm2text}} around here")
             .unwrap();
-        assert_eq!(result, "Hi, this is shit around here")
+        assert_eq!(result, "Hi, this is SHIT around here")
     }
 }
