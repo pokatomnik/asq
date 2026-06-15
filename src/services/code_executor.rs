@@ -53,7 +53,7 @@ impl CodeExecutor {
     }
 
     /// Runs a code for template pipeline, for example:
-    /// "Your name:" | prompt | lowercase
+    /// "<p>Hello</p>" | htm2text
     pub fn execute(&self) -> anyhow::Result<String> {
         let code_raw = Self::get_code_raw(self.source_raw.as_str());
 
